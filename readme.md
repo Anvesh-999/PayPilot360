@@ -1,8 +1,5 @@
 # PeoplePay360 — Next-Gen HR & Automated Payroll Platform
 
-<p align="center">
-  <img src="./client/src/assets/hero.png" alt="PeoplePay360 Hero" width="850" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);" />
-</p>
 
 <p align="center">
   <strong>An enterprise-grade, full-stack Human Resource Management & Automated Payroll Engine built with modern pastel aesthetics, dynamic mathematical formula evaluation, multi-level leave approvals, real-time shift punch tracking, and automated PDF payslip generation.</strong>
