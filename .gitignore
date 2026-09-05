@@ -44,5 +44,7 @@ coverage/
 *.md
 */*.md
 **/*.md
+!/readme.md
+!/README.md
 *.pdf
 
