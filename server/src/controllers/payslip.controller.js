@@ -26,9 +26,10 @@ const list = async (req, res, next) => {
       prisma.payslip.findMany({
         where,
         include: {
-          employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, department: { select: { name: true } } } },
+          employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, email: true, department: { select: { name: true } } } },
           payrun: { select: { name: true, periodStart: true, periodEnd: true, status: true } },
           contract: { select: { basicWage: true, wageType: true } },
+          lines: { orderBy: { sequence: 'asc' } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (parseInt(page) - 1) * parseInt(pageSize),
@@ -37,7 +38,30 @@ const list = async (req, res, next) => {
       prisma.payslip.count({ where }),
     ]);
 
-    res.json({ success: true, data: { items, page: parseInt(page), pageSize: parseInt(pageSize), total } });
+    const formattedItems = items.map(ps => {
+      const periodYearMonth = ps.payrun?.periodStart 
+        ? new Date(ps.payrun.periodStart).toISOString().slice(0, 7) 
+        : new Date(ps.createdAt).toISOString().slice(0, 7);
+      const empNum = ps.employee?.employeeCode 
+        ? ps.employee.employeeCode.replace(/[^0-9]/g, '').padStart(4, '0') 
+        : (ps.id || '').slice(0, 4).toUpperCase();
+      const payslipNumber = `PS-${periodYearMonth}-${empNum || '0001'}`;
+
+      return {
+        ...ps,
+        payslipNumber,
+        payPeriod: ps.payrun?.name || `${new Date(ps.payrun?.periodStart || ps.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        grossPay: Number(ps.grossSalary),
+        totalDeductions: Number(ps.totalDeductions),
+        netPay: Number(ps.netSalary),
+        employee: {
+          ...ps.employee,
+          code: ps.employee?.employeeCode,
+        }
+      };
+    });
+
+    res.json({ success: true, data: { items: formattedItems, page: parseInt(page), pageSize: parseInt(pageSize), total } });
   } catch (error) { next(error); }
 };
 
@@ -62,7 +86,29 @@ const getById = async (req, res, next) => {
       throw new AppError('Access denied', 403, 'FORBIDDEN');
     }
 
-    res.json({ success: true, data: payslip });
+    const periodYearMonth = payslip.payrun?.periodStart 
+      ? new Date(payslip.payrun.periodStart).toISOString().slice(0, 7) 
+      : new Date(payslip.createdAt).toISOString().slice(0, 7);
+    const empNum = payslip.employee?.employeeCode 
+      ? payslip.employee.employeeCode.replace(/[^0-9]/g, '').padStart(4, '0') 
+      : (payslip.id || '').slice(0, 4).toUpperCase();
+    const payslipNumber = `PS-${periodYearMonth}-${empNum || '0001'}`;
+
+    res.json({ 
+      success: true, 
+      data: {
+        ...payslip,
+        payslipNumber,
+        payPeriod: payslip.payrun?.name || `${new Date(payslip.payrun?.periodStart || payslip.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+        grossPay: Number(payslip.grossSalary),
+        totalDeductions: Number(payslip.totalDeductions),
+        netPay: Number(payslip.netSalary),
+        employee: {
+          ...payslip.employee,
+          code: payslip.employee?.employeeCode,
+        }
+      }
+    });
   } catch (error) { next(error); }
 };
 
