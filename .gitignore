@@ -40,10 +40,9 @@ Thumbs.db
 coverage/
 */coverage/
 
-# Local Documentation & Task Files (Kept local, untracked on Git)
-PeoplePay360_PRD.md
-task.md
-*people*pay*.md
-*PRD*.md
+# Local Documentation & Markdown Files (Kept local, untracked on Git)
+*.md
+*/*.md
+**/*.md
 *.pdf
 
