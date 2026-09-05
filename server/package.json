@@ -10,6 +10,7 @@
     "db:push": "npx prisma db push",
     "db:generate": "npx prisma generate",
     "db:studio": "npx prisma studio",
+    "db:check": "node scripts/check-db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "prisma": {
