@@ -138,7 +138,7 @@ const downloadPdf = async (req, res, next) => {
     for (const line of earnings) {
       doc.fontSize(10).font('Helvetica');
       doc.text(line.label, leftCol, doc.y, { continued: true, width: 300 });
-      doc.text(`₹${parseFloat(line.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
+      doc.text(`Rs. ${parseFloat(line.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
     }
 
     doc.moveDown();
@@ -148,7 +148,7 @@ const downloadPdf = async (req, res, next) => {
     for (const line of deductions) {
       doc.fontSize(10).font('Helvetica');
       doc.text(line.label, leftCol, doc.y, { continued: true, width: 300 });
-      doc.text(`₹${parseFloat(Math.abs(line.amount)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
+      doc.text(`Rs. ${parseFloat(Math.abs(line.amount)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
     }
 
     doc.moveDown(2);
@@ -158,15 +158,15 @@ const downloadPdf = async (req, res, next) => {
     // Totals
     doc.fontSize(11).font('Helvetica-Bold');
     doc.text('Gross Salary:', leftCol, doc.y, { continued: true, width: 300 });
-    doc.text(`₹${parseFloat(payslip.grossSalary).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
+    doc.text(`Rs. ${parseFloat(payslip.grossSalary).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
 
     doc.text('Total Deductions:', leftCol, doc.y, { continued: true, width: 300 });
-    doc.text(`₹${parseFloat(payslip.totalDeductions).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
+    doc.text(`Rs. ${parseFloat(payslip.totalDeductions).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
 
     doc.moveDown(0.5);
     doc.fontSize(14).font('Helvetica-Bold');
     doc.text('Net Salary:', leftCol, doc.y, { continued: true, width: 300 });
-    doc.text(`₹${parseFloat(payslip.netSalary).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
+    doc.text(`Rs. ${parseFloat(payslip.netSalary).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, { align: 'right' });
 
     doc.moveDown(3);
     doc.fontSize(8).font('Helvetica').fillColor('grey');
