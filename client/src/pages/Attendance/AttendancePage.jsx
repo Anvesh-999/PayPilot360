@@ -51,7 +51,27 @@ export default function AttendancePage() {
     setLoading(true);
     try {
       const { data } = await api.get('/attendance?pageSize=500');
-      setLogs(data.data?.items || (Array.isArray(data.data) ? data.data : []));
+      const raw = data.data?.items || (Array.isArray(data.data) ? data.data : []);
+      const mapped = raw.map(item => {
+        let hrs = item.workedHours ?? item.totalHours;
+        if ((hrs === null || hrs === undefined) && item.checkIn && item.checkOut) {
+          const diffMs = new Date(item.checkOut) - new Date(item.checkIn);
+          if (diffMs > 0) {
+            hrs = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+          }
+        }
+        return {
+          ...item,
+          workedHours: hrs !== null && hrs !== undefined ? Number(hrs) : null,
+          totalHours: hrs !== null && hrs !== undefined ? Number(hrs) : null,
+          employee: {
+            ...item.employee,
+            code: item.employee?.employeeCode || item.employee?.code,
+            employeeCode: item.employee?.employeeCode || item.employee?.code,
+          }
+        };
+      });
+      setLogs(mapped);
     } catch (err) {
       setLogs([]);
     } finally {
@@ -93,7 +113,9 @@ export default function AttendancePage() {
       render: (_, row) => (
         <div>
           <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</span>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+            {row.employee?.employeeCode || row.employee?.code || 'EMP-XXXX'}
+          </span>
         </div>
       )
     },
@@ -116,9 +138,38 @@ export default function AttendancePage() {
       )
     },
     {
-      key: 'totalHours',
+      key: 'workedHours',
       label: 'Hours Worked',
-      render: (val) => val ? `${parseFloat(val).toFixed(2)} hrs` : '—'
+      sortable: true,
+      render: (val, row) => {
+        let hrs = val ?? row.workedHours ?? row.totalHours;
+        if ((hrs === null || hrs === undefined || hrs === '') && row.checkIn && row.checkOut) {
+          const diffMs = new Date(row.checkOut) - new Date(row.checkIn);
+          if (diffMs > 0) {
+            hrs = (diffMs / (1000 * 60 * 60)).toFixed(2);
+          }
+        }
+        if (hrs !== null && hrs !== undefined && hrs !== '') {
+          return (
+            <span style={{
+              fontWeight: 700,
+              color: '#4338ca',
+              backgroundColor: '#eef2ff',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              border: '1px solid #c7d2fe',
+              fontSize: '0.82rem',
+              display: 'inline-block'
+            }}>
+              {parseFloat(hrs).toFixed(2)} hrs
+            </span>
+          );
+        }
+        if (row.checkIn && !row.checkOut) {
+          return <span style={{ color: '#059669', fontStyle: 'italic', fontSize: '0.78rem', fontWeight: 600 }}>Active shift</span>;
+        }
+        return '—';
+      }
     },
     {
       key: 'status',

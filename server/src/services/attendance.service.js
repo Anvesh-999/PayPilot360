@@ -206,7 +206,26 @@ class AttendanceService {
       prisma.attendance.count({ where }),
     ]);
 
-    return { items, page: pageNum, pageSize: take, total };
+    const formattedItems = items.map(att => {
+      let hours = att.workedHours;
+      if ((hours === null || hours === undefined) && att.checkIn && att.checkOut) {
+        const diffMs = new Date(att.checkOut) - new Date(att.checkIn);
+        if (diffMs > 0) {
+          hours = parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2));
+        }
+      }
+      return {
+        ...att,
+        workedHours: hours !== null && hours !== undefined ? Number(hours) : null,
+        totalHours: hours !== null && hours !== undefined ? Number(hours) : null,
+        employee: {
+          ...att.employee,
+          code: att.employee?.employeeCode,
+        }
+      };
+    });
+
+    return { items: formattedItems, page: pageNum, pageSize: take, total };
   }
 
   /**

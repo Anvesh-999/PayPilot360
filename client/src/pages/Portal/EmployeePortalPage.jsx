@@ -436,8 +436,30 @@ export default function EmployeePortalPage() {
                         <span style={{ color: '#059669', fontStyle: 'italic', fontWeight: 600 }}>Active</span>
                       )}
                     </td>
-                    <td style={{ padding: '14px 20px', fontWeight: 600, color: '#4f46e5' }}>
-                      {log.workedHours ? `${parseFloat(log.workedHours).toFixed(2)} hrs` : '—'}
+                    <td style={{ padding: '14px 20px', fontWeight: 600, color: '#4338ca' }}>
+                      {(() => {
+                        let hrs = log.workedHours ?? log.totalHours;
+                        if ((hrs === null || hrs === undefined || hrs === '') && log.checkIn && log.checkOut) {
+                          const diffMs = new Date(log.checkOut) - new Date(log.checkIn);
+                          if (diffMs > 0) hrs = (diffMs / (1000 * 60 * 60)).toFixed(2);
+                        }
+                        return hrs !== null && hrs !== undefined && hrs !== '' ? (
+                          <span style={{
+                            backgroundColor: '#eef2ff',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #c7d2fe',
+                            fontSize: '0.82rem',
+                            display: 'inline-block'
+                          }}>
+                            {parseFloat(hrs).toFixed(2)} hrs
+                          </span>
+                        ) : (
+                          log.checkIn && !log.checkOut ? (
+                            <span style={{ color: '#059669', fontStyle: 'italic', fontSize: '0.78rem' }}>Active</span>
+                          ) : '—'
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '14px 20px' }}>
                       <span className={`badge ${log.status === 'PRESENT' ? 'badge-success' : log.status === 'LATE' ? 'badge-warning' : 'badge-danger'}`}>

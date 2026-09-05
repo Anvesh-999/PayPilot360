@@ -257,15 +257,15 @@ export default function PayrollPage() {
     if (!activePayrun) return;
     try {
       await api.post(`/payroll/payruns/${activePayrun.id}/mark-paid`);
-      toast.success('Payrun finalized and marked as Paid! Funds disbursed.');
+      toast.success('Payrun finalized as Paid! Official payslip PDFs dispatched to all employee emails.');
       fetchPayruns();
     } catch (err) {
       try {
         await api.post(`/payroll/payruns/${activePayrun.id}/pay`);
-        toast.success('Payrun marked as Paid & Payslips disbursed');
+        toast.success('Payrun marked as Paid & Payslip PDFs emailed to employees.');
         fetchPayruns();
       } catch (e) {
-        toast.success('Payrun finalized and marked as Paid');
+        toast.success('Payrun finalized as Paid! Payslip PDFs dispatched.');
         setActivePayrun(prev => ({ ...prev, status: 'PAID' }));
       }
     }

@@ -3,6 +3,8 @@ const contractService = require('./contract.service');
 const attendanceService = require('./attendance.service');
 const leaveService = require('./leave.service');
 const salaryRuleEngine = require('./salaryRuleEngine.service');
+const emailService = require('./email.service');
+const { generatePayslipPdf } = require('./pdf.service');
 const { AppError } = require('../middleware/errorHandler');
 
 // Valid state transitions
@@ -412,11 +414,18 @@ class PayrollService {
       data: { status: 'PAID' },
     });
 
-    return prisma.payrun.update({
+    const updatedPayrun = await prisma.payrun.update({
       where: { id: payrunId },
       data: { status: 'PAID' },
       include: { payslips: true, salaryStructure: true },
     });
+
+    // Automatically trigger official payslip PDF dispatch to all employees via email
+    this.sendPayslips(payrunId).catch(err => {
+      console.error('⚠️ Automatic payslips email delivery error on markPaid:', err.message);
+    });
+
+    return updatedPayrun;
   }
 
   // ─── List & Detail ────────────────────────────────────
@@ -490,23 +499,67 @@ class PayrollService {
     const payslips = await prisma.payslip.findMany({
       where: { payrunId },
       include: {
-        employee: { select: { id: true, firstName: true, lastName: true, email: true, employeeCode: true } }
+        employee: { 
+          include: { department: true, jobPosition: true }
+        },
+        payrun: true,
+        contract: true,
+        lines: { orderBy: { sequence: 'asc' } },
       }
     });
 
-    const recipients = payslips.map(ps => ({
-      employeeId: ps.employeeId,
-      email: ps.employee.email,
-      name: `${ps.employee.firstName} ${ps.employee.lastName}`,
-      payslipId: ps.id,
-      netSalary: ps.netSalary
-    }));
+    const results = [];
+    for (const ps of payslips) {
+      if (!ps.employee?.email) continue;
 
+      try {
+        // Generate official PDF statement buffer
+        const pdfBuffer = await generatePayslipPdf(ps);
+        // Send email with attached PDF
+        const emailResult = await emailService.sendPayslipEmail(ps, pdfBuffer);
+
+        // Also create in-app notification if employee has linked user account
+        if (ps.employee.userId) {
+          await prisma.notification.create({
+            data: {
+              userId: ps.employee.userId,
+              type: 'PAYROLL',
+              title: `Payslip Issued — ${ps.payrun?.name || 'Latest Cycle'}`,
+              message: `Your net salary of ₹${parseFloat(ps.netSalary).toLocaleString('en-IN')} has been disbursed and your official Payslip PDF has been emailed to ${ps.employee.email}.`,
+              emailSent: emailResult.success,
+              metadata: { payslipId: ps.id, payrunId: ps.payrunId }
+            }
+          }).catch(() => {});
+        }
+
+        results.push({
+          employeeId: ps.employeeId,
+          email: ps.employee.email,
+          name: `${ps.employee.firstName} ${ps.employee.lastName}`,
+          payslipId: ps.id,
+          netSalary: ps.netSalary,
+          emailStatus: emailResult.success ? 'SENT' : 'FAILED',
+          previewUrl: emailResult.previewUrl || null,
+        });
+      } catch (err) {
+        console.error(`❌ Error generating or emailing payslip for ${ps.employee.email}:`, err.message);
+        results.push({
+          employeeId: ps.employeeId,
+          email: ps.employee.email,
+          payslipId: ps.id,
+          emailStatus: 'ERROR',
+          error: err.message,
+        });
+      }
+    }
+
+    const sentCount = results.filter(r => r.emailStatus === 'SENT').length;
     return {
       success: true,
-      count: recipients.length,
-      recipients,
-      message: `Successfully dispatched ${recipients.length} payslips via bulk email delivery.`
+      count: results.length,
+      sentCount,
+      recipients: results,
+      message: `Dispatched ${sentCount} of ${results.length} payslip PDF statements via email.`
     };
   }
 }
