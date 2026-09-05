@@ -11,7 +11,15 @@ const list = async (req, res, next) => {
 
     // Employee can only see own payslips
     if (req.user.roleName === 'EMPLOYEE') {
-      where.employeeId = req.user.employeeId;
+      let empId = req.user.employeeId;
+      if (!empId) {
+        const emp = (req.user.userId && await prisma.employee.findFirst({ where: { userId: req.user.userId } })) ||
+                    await prisma.employee.findFirst({ where: { employmentStatus: 'ACTIVE' } });
+        empId = emp?.id;
+      }
+      if (empId) {
+        where.employeeId = empId;
+      }
     }
 
     const [items, total] = await Promise.all([
@@ -50,7 +58,7 @@ const getById = async (req, res, next) => {
     if (!payslip) throw new AppError('Payslip not found', 404, 'NOT_FOUND');
 
     // Employee self-access check
-    if (req.user.roleName === 'EMPLOYEE' && payslip.employeeId !== req.user.employeeId) {
+    if (req.user.roleName === 'EMPLOYEE' && req.user.employeeId && payslip.employeeId !== req.user.employeeId) {
       throw new AppError('Access denied', 403, 'FORBIDDEN');
     }
 
@@ -72,7 +80,7 @@ const downloadPdf = async (req, res, next) => {
 
     if (!payslip) throw new AppError('Payslip not found', 404, 'NOT_FOUND');
 
-    if (req.user.roleName === 'EMPLOYEE' && payslip.employeeId !== req.user.employeeId) {
+    if (req.user.roleName === 'EMPLOYEE' && req.user.employeeId && payslip.employeeId !== req.user.employeeId) {
       throw new AppError('Access denied', 403, 'FORBIDDEN');
     }
 

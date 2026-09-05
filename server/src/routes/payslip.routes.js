@@ -5,8 +5,8 @@ const { authenticateJWT, authorizeRole } = require('../middleware/auth');
 
 router.use(authenticateJWT);
 
-router.get('/', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'EMPLOYEE']), ctrl.list);
-router.get('/:id', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'EMPLOYEE']), ctrl.getById);
-router.get('/:id/pdf', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'EMPLOYEE']), ctrl.downloadPdf);
+router.get('/', ctrl.list);
+router.get('/:id', ctrl.getById);
+router.get('/:id/pdf', ctrl.downloadPdf);
 
 module.exports = router;

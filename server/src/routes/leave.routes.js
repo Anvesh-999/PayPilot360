@@ -14,7 +14,7 @@ router.put('/types/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), ctrl.upda
 
 // Leave Balances
 router.get('/balances', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'EMPLOYEE']), ctrl.listBalances);
-router.get('/balances/my', authorizeRole(['EMPLOYEE']), ctrl.getMyBalances);
+router.get('/balances/my', ctrl.getMyBalances);
 router.post('/balances', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(leaveBalanceSchema), ctrl.allocateBalance);
 
 // Leave Requests

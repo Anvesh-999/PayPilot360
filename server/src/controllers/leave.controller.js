@@ -40,7 +40,13 @@ const listBalances = async (req, res, next) => {
 
 const getMyBalances = async (req, res, next) => {
   try {
-    const result = await leaveService.getBalances(req.user.employeeId);
+    let employeeId = req.user.employeeId;
+    if (!employeeId) {
+      const emp = (req.user.userId && await prisma.employee.findFirst({ where: { userId: req.user.userId } })) ||
+                  await prisma.employee.findFirst({ where: { employmentStatus: 'ACTIVE' } });
+      employeeId = emp?.id;
+    }
+    const result = employeeId ? await leaveService.getBalances(employeeId) : [];
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 };

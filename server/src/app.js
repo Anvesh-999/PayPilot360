@@ -53,6 +53,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/leaves', leaveRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/payslips', payslipRoutes);

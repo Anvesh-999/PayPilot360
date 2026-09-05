@@ -18,7 +18,7 @@ export default function EmployeePortalPage() {
         setLoading(true);
         const [psRes, lbRes] = await Promise.allSettled([
           api.get('/payslips'),
-          api.get('/leaves/balances/my'),
+          api.get('/leave/balances/my'),
         ]);
 
         if (psRes.status === 'fulfilled' && psRes.value.data?.data?.items) {
