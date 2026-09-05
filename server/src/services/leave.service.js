@@ -42,10 +42,14 @@ class LeaveService {
   }
 
   async listBalances(query) {
-    const { employeeId, leaveTypeId, page = 1, pageSize = 20 } = query;
+    const { employeeId, leaveTypeId, page = 1, pageSize = 500 } = query;
     const where = {};
     if (employeeId) where.employeeId = employeeId;
     if (leaveTypeId) where.leaveTypeId = leaveTypeId;
+
+    const take = parseInt(pageSize, 10) || 500;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * take;
 
     const [items, total] = await Promise.all([
       prisma.leaveBalance.findMany({
@@ -54,13 +58,13 @@ class LeaveService {
           leaveType: true,
           employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
         },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
       }),
       prisma.leaveBalance.count({ where }),
     ]);
 
-    return { items, page, pageSize, total };
+    return { items, page: pageNum, pageSize: take, total };
   }
 
   // ─── Leave Requests ───────────────────────────────────
@@ -136,10 +140,14 @@ class LeaveService {
   }
 
   async listRequests(query) {
-    const { employeeId, status, page = 1, pageSize = 20 } = query;
+    const { employeeId, status, page = 1, pageSize = 500 } = query;
     const where = {};
     if (employeeId) where.employeeId = employeeId;
     if (status) where.status = status;
+
+    const take = parseInt(pageSize, 10) || 500;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * take;
 
     const [items, total] = await Promise.all([
       prisma.leaveRequest.findMany({
@@ -149,13 +157,13 @@ class LeaveService {
           employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, department: { select: { name: true } } } },
         },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
       }),
       prisma.leaveRequest.count({ where }),
     ]);
 
-    return { items, page, pageSize, total };
+    return { items, page: pageNum, pageSize: take, total };
   }
 
   async getRequestById(id) {

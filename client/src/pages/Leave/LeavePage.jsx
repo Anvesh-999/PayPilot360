@@ -36,9 +36,9 @@ export default function LeavePage() {
     setLoading(true);
     try {
       const [reqRes, typeRes, balRes] = await Promise.allSettled([
-        api.get('/leave/requests'),
+        api.get('/leave/requests?pageSize=500'),
         api.get('/leave/types'),
-        api.get('/leave/balances')
+        api.get('/leave/balances?pageSize=500')
       ]);
 
       if (reqRes.status === 'fulfilled') {

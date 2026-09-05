@@ -7,7 +7,7 @@ export default function DataTable({
   searchKey,
   searchPlaceholder = 'Search records...',
   actions,
-  pageSize = 10,
+  pageSize: initialPageSize = 25,
   emptyMessage = 'No records found'
 }) {
   const data = useMemo(() => {
@@ -16,6 +16,7 @@ export default function DataTable({
     return [];
   }, [propData]);
 
+  const [pageSize, setPageSize] = useState(initialPageSize);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState(null);
@@ -237,7 +238,33 @@ export default function DataTable({
         <span>
           Showing <strong style={{ color: '#0f172a' }}>{sortedData.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to <strong style={{ color: '#0f172a' }}>{Math.min(currentPage * pageSize, sortedData.length)}</strong> of <strong style={{ color: '#0f172a' }}>{sortedData.length}</strong> entries
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Rows:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              style={{
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={500}>All (500)</option>
+            </select>
+          </div>
           <button
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage === 1}

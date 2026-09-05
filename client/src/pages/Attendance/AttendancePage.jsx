@@ -50,7 +50,7 @@ export default function AttendancePage() {
   const fetchAttendance = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/attendance');
+      const { data } = await api.get('/attendance?pageSize=500');
       setLogs(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setLogs([]);
@@ -62,7 +62,7 @@ export default function AttendancePage() {
   const fetchEmployees = async () => {
     if (!isManager) return;
     try {
-      const { data } = await api.get('/employees');
+      const { data } = await api.get('/employees?pageSize=500');
       setEmployees(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (e) {}
   };

@@ -66,7 +66,7 @@ export default function EmployeeListPage() {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/employees');
+      const { data } = await api.get('/employees?pageSize=500');
       const items = data.data?.items || (Array.isArray(data.data) ? data.data : (data.data?.data || []));
       setEmployees(items);
     } catch (err) {

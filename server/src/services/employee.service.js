@@ -96,7 +96,7 @@ class EmployeeService {
     const {
       search, department, status, employmentType,
       sort = 'firstName', order = 'asc',
-      page = 1, pageSize = 20,
+      page = 1, pageSize = 500,
     } = query;
 
     const where = {};
@@ -122,6 +122,10 @@ class EmployeeService {
       where.employmentType = employmentType;
     }
 
+    const take = parseInt(pageSize, 10) || 500;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * take;
+
     const [items, total] = await Promise.all([
       prisma.employee.findMany({
         where,
@@ -131,13 +135,13 @@ class EmployeeService {
           manager: { select: { id: true, firstName: true, lastName: true } },
         },
         orderBy: { [sort]: order },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
       }),
       prisma.employee.count({ where }),
     ]);
 
-    return { items, page, pageSize, total };
+    return { items, page: pageNum, pageSize: take, total };
   }
 
   /**

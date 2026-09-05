@@ -178,7 +178,7 @@ class AttendanceService {
    * List attendance records with filters.
    */
   async list(query) {
-    const { employeeId, from, to, status, page = 1, pageSize = 20 } = query;
+    const { employeeId, from, to, status, page = 1, pageSize = 500 } = query;
     const where = {};
 
     if (employeeId) where.employeeId = employeeId;
@@ -189,6 +189,10 @@ class AttendanceService {
       if (to) where.date.lte = new Date(to);
     }
 
+    const take = parseInt(pageSize, 10) || 500;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * take;
+
     const [items, total] = await Promise.all([
       prisma.attendance.findMany({
         where,
@@ -196,13 +200,13 @@ class AttendanceService {
           employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true, department: { select: { name: true } } } },
         },
         orderBy: { date: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
       }),
       prisma.attendance.count({ where }),
     ]);
 
-    return { items, page, pageSize, total };
+    return { items, page: pageNum, pageSize: take, total };
   }
 
   /**

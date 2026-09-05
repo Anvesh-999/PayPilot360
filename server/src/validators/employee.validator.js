@@ -39,7 +39,7 @@ const employeeQuerySchema = z.object({
   sort: z.string().optional().default('firstName'),
   order: z.enum(['asc', 'desc']).optional().default('asc'),
   page: z.coerce.number().int().positive().optional().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
+  pageSize: z.coerce.number().int().positive().max(1000).optional().default(500),
 });
 
 module.exports = { employeeCreateSchema, employeeUpdateSchema, employeeQuerySchema };

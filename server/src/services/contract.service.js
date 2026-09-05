@@ -109,10 +109,14 @@ class ContractService {
   }
 
   async list(query) {
-    const { employeeId, status, page = 1, pageSize = 20 } = query;
+    const { employeeId, status, page = 1, pageSize = 500 } = query;
     const where = {};
     if (employeeId) where.employeeId = employeeId;
     if (status) where.status = status;
+
+    const take = parseInt(pageSize, 10) || 500;
+    const pageNum = parseInt(page, 10) || 1;
+    const skip = (pageNum - 1) * take;
 
     const [items, total] = await Promise.all([
       prisma.contract.findMany({
@@ -124,13 +128,13 @@ class ContractService {
           salaryStructure: true,
         },
         orderBy: { startDate: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip,
+        take,
       }),
       prisma.contract.count({ where }),
     ]);
 
-    return { items, page, pageSize, total };
+    return { items, page: pageNum, pageSize: take, total };
   }
 
   async getById(id) {

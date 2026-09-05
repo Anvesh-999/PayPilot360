@@ -39,8 +39,8 @@ export default function ContractListPage() {
     setLoading(true);
     try {
       const [contRes, empRes, structRes, schedRes] = await Promise.allSettled([
-        api.get('/contracts'),
-        api.get('/employees'),
+        api.get('/contracts?pageSize=500'),
+        api.get('/employees?pageSize=500'),
         api.get('/salary/structures'),
         api.get('/working-schedules')
       ]);
