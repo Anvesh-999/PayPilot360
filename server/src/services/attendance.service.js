@@ -240,6 +240,52 @@ class AttendanceService {
   }
 
   /**
+   * Manual creation of attendance record by HR.
+   */
+  async manualEntry(data, createdById) {
+    const { employeeId, date, checkIn, checkOut, remarks, status } = data;
+    const targetDate = new Date(`${date}T00:00:00.000Z`);
+    let ciDate = null;
+    let coDate = null;
+    let workedHours = null;
+
+    if (checkIn) {
+      ciDate = new Date(`${date}T${checkIn.length === 5 ? checkIn + ':00' : checkIn}`);
+    }
+    if (checkOut) {
+      coDate = new Date(`${date}T${checkOut.length === 5 ? checkOut + ':00' : checkOut}`);
+    }
+    if (ciDate && coDate && coDate > ciDate) {
+      workedHours = parseFloat(((coDate - ciDate) / (1000 * 60 * 60)).toFixed(2));
+    }
+
+    return prisma.attendance.upsert({
+      where: { employeeId_date: { employeeId, date: targetDate } },
+      create: {
+        employeeId,
+        date: targetDate,
+        checkIn: ciDate,
+        checkOut: coDate,
+        workedHours,
+        status: status || 'PRESENT',
+        source: 'MANUAL_CORRECTION',
+        correctedById: createdById,
+      },
+      update: {
+        checkIn: ciDate,
+        checkOut: coDate,
+        workedHours,
+        status: status || 'PRESENT',
+        source: 'MANUAL_CORRECTION',
+        correctedById: createdById,
+      },
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
+      },
+    });
+  }
+
+  /**
    * Aggregate attendance for payroll: count worked days, overtime, etc. for a period.
    */
   async aggregateForPayroll(employeeId, periodStart, periodEnd) {

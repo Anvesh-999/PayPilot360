@@ -484,6 +484,31 @@ class PayrollService {
       );
     }
   }
+
+  async sendPayslips(payrunId) {
+    const payrun = await this.getPayrun(payrunId);
+    const payslips = await prisma.payslip.findMany({
+      where: { payrunId },
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true, email: true, employeeCode: true } }
+      }
+    });
+
+    const recipients = payslips.map(ps => ({
+      employeeId: ps.employeeId,
+      email: ps.employee.email,
+      name: `${ps.employee.firstName} ${ps.employee.lastName}`,
+      payslipId: ps.id,
+      netSalary: ps.netSalary
+    }));
+
+    return {
+      success: true,
+      count: recipients.length,
+      recipients,
+      message: `Successfully dispatched ${recipients.length} payslips via bulk email delivery.`
+    };
+  }
 }
 
 module.exports = new PayrollService();

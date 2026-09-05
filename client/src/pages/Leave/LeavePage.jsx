@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/Common/DataTable';
 import StatCard from '../../components/Common/StatCard';
-import { CalendarCheck, Clock, CheckCircle2, XCircle, Plus, X } from 'lucide-react';
+import { CalendarCheck, Clock, CheckCircle2, XCircle, Plus, X, Layers, User, Calendar, ShieldCheck } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LeavePage() {
   const { user, hasRole } = useAuth();
+  const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'allocations' | 'types'
   const [requests, setRequests] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
+  const [balances, setBalances] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
 
   const isManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
 
@@ -22,27 +25,52 @@ export default function LeavePage() {
     reason: '',
   });
 
+  const [typeForm, setTypeForm] = useState({
+    name: '',
+    code: '',
+    paid: true,
+    maxDaysPerYear: 18,
+  });
+
   const fetchLeaves = async () => {
     setLoading(true);
     try {
-      const [reqRes, typeRes] = await Promise.all([
+      const [reqRes, typeRes, balRes] = await Promise.allSettled([
         api.get('/leave/requests'),
-        api.get('/leave/types')
+        api.get('/leave/types'),
+        api.get('/leave/balances')
       ]);
-      const reqItems = reqRes.data.data?.items || (Array.isArray(reqRes.data.data) ? reqRes.data.data : []);
-      const typeItems = Array.isArray(typeRes.data.data) ? typeRes.data.data : (typeRes.data.data?.items || []);
-      setRequests(reqItems);
-      setLeaveTypes(typeItems);
+
+      if (reqRes.status === 'fulfilled') {
+        const reqItems = reqRes.value.data?.data?.items || (Array.isArray(reqRes.value.data?.data) ? reqRes.value.data.data : []);
+        setRequests(reqItems);
+      }
+      if (typeRes.status === 'fulfilled') {
+        const typeItems = Array.isArray(typeRes.value.data?.data) ? typeRes.value.data.data : (typeRes.value.data?.data?.items || []);
+        setLeaveTypes(typeItems);
+        if (typeItems.length > 0 && !formData.leaveTypeId) {
+          setFormData(prev => ({ ...prev, leaveTypeId: typeItems[0].id }));
+        }
+      }
+      if (balRes.status === 'fulfilled') {
+        const balItems = balRes.value.data?.data?.items || (Array.isArray(balRes.value.data?.data) ? balRes.value.data.data : []);
+        setBalances(balItems);
+      }
     } catch (err) {
+      // Fallback sample data
       setRequests([
-        { id: 'lr1', employee: { firstName: 'Michael', lastName: 'Brown', code: 'EMP-0003' }, leaveType: { name: 'Paid Annual Leave', paid: true }, startDate: '2026-03-10', endDate: '2026-03-12', totalDays: 3, reason: 'Family trip', status: 'PENDING' },
-        { id: 'lr2', employee: { firstName: 'Sarah', lastName: 'Connor', code: 'EMP-0004' }, leaveType: { name: 'Sick Leave', paid: true }, startDate: '2026-03-02', endDate: '2026-03-03', totalDays: 2, reason: 'Flu recovery', status: 'APPROVED' },
-        { id: 'lr3', employee: { firstName: 'David', lastName: 'Miller', code: 'EMP-0005' }, leaveType: { name: 'Unpaid Leave (LOP)', paid: false }, startDate: '2026-03-15', endDate: '2026-03-16', totalDays: 2, reason: 'Personal errands', status: 'APPROVED' },
+        { id: 'lr1', employee: { firstName: 'Aisha', lastName: 'Verma', employeeCode: 'EMP-0001' }, leaveType: { name: 'Paid Annual Leave', paid: true }, startDate: '2026-03-10', endDate: '2026-03-12', totalDays: 3, reason: 'Family event', status: 'PENDING' },
+        { id: 'lr2', employee: { firstName: 'Rohan', lastName: 'Sharma', employeeCode: 'EMP-0002' }, leaveType: { name: 'Sick Leave', paid: true }, startDate: '2026-03-02', endDate: '2026-03-03', totalDays: 2, reason: 'Flu recovery', status: 'APPROVED' },
+        { id: 'lr3', employee: { firstName: 'Priya', lastName: 'Nair', employeeCode: 'EMP-0003' }, leaveType: { name: 'Unpaid Leave (LOP)', paid: false }, startDate: '2026-03-15', endDate: '2026-03-16', totalDays: 2, reason: 'Personal errands', status: 'APPROVED' },
       ]);
       setLeaveTypes([
-        { id: 'lt1', name: 'Paid Annual Leave', paid: true, maxDaysPerYear: 20 },
-        { id: 'lt2', name: 'Sick Leave', paid: true, maxDaysPerYear: 10 },
-        { id: 'lt3', name: 'Unpaid Leave (LOP)', paid: false, maxDaysPerYear: 30 },
+        { id: 'lt1', name: 'Paid Annual Leave', code: 'ANNUAL', paid: true, maxDaysPerYear: 20 },
+        { id: 'lt2', name: 'Sick Leave', code: 'SICK', paid: true, maxDaysPerYear: 10 },
+        { id: 'lt3', name: 'Unpaid Leave (LOP)', code: 'LOP', paid: false, maxDaysPerYear: 30 },
+      ]);
+      setBalances([
+        { id: 'lb1', employee: { firstName: 'Aisha', lastName: 'Verma', employeeCode: 'EMP-0001' }, leaveType: { name: 'Paid Annual Leave' }, allocated: 20, taken: 3, remaining: 17, validFrom: '2026-01-01' },
+        { id: 'lb2', employee: { firstName: 'Rohan', lastName: 'Sharma', employeeCode: 'EMP-0002' }, leaveType: { name: 'Sick Leave' }, allocated: 10, taken: 2, remaining: 8, validFrom: '2026-01-01' },
       ]);
     } finally {
       setLoading(false);
@@ -57,11 +85,27 @@ export default function LeavePage() {
     e.preventDefault();
     try {
       await api.post('/leave/requests', formData);
-      toast.success('Leave request submitted');
+      toast.success('Leave request submitted successfully');
       setIsModalOpen(false);
       fetchLeaves();
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Failed to submit leave request');
+    }
+  };
+
+  const handleCreateType = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/leave/types', {
+        ...typeForm,
+        code: typeForm.code || typeForm.name.toUpperCase().replace(/\s+/g, '_'),
+        maxDaysPerYear: parseInt(typeForm.maxDaysPerYear) || 15
+      });
+      toast.success('Leave policy type configured successfully');
+      setIsTypeModalOpen(false);
+      fetchLeaves();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to create leave policy');
     }
   };
 
@@ -75,7 +119,8 @@ export default function LeavePage() {
     }
   };
 
-  const columns = [
+  // 1. Requests Columns
+  const requestColumns = [
     {
       key: 'employee',
       label: 'Employee',
@@ -83,7 +128,9 @@ export default function LeavePage() {
       render: (_, row) => (
         <div>
           <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</span>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+            {row.employee?.employeeCode || row.employee?.code || 'EMP-XXXX'}
+          </span>
         </div>
       )
     },
@@ -95,7 +142,7 @@ export default function LeavePage() {
         <div>
           <span style={{ color: '#0f172a', fontWeight: 600 }}>{row.leaveType?.name}</span>
           <span style={{ display: 'block', fontSize: '0.74rem', color: row.leaveType?.paid ? '#059669' : '#d97706', fontWeight: 500 }}>
-            {row.leaveType?.paid ? '● Paid' : '● Unpaid (Affects LOP)'}
+            {row.leaveType?.paid ? '● Paid' : '● Unpaid (Loss of Pay)'}
           </span>
         </div>
       )
@@ -132,9 +179,18 @@ export default function LeavePage() {
     },
     {
       key: 'actions',
-      label: 'Approvals',
+      label: isManager ? 'Approvals' : 'Status',
       render: (_, row) => {
-        if (row.status !== 'PENDING' || !isManager) return <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Closed</span>;
+        if (!isManager) {
+          return (
+            <span className={`badge ${row.status === 'APPROVED' ? 'badge-success' : row.status === 'REJECTED' ? 'badge-danger' : 'badge-warning'}`}>
+              {row.status === 'PENDING' ? 'Awaiting Review' : row.status}
+            </span>
+          );
+        }
+        if (row.status !== 'PENDING') {
+          return <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{row.status}</span>;
+        }
         return (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -148,13 +204,12 @@ export default function LeavePage() {
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.15s ease'
+                gap: '4px'
               }}
             >
-              <CheckCircle2 size={13} /> Approve
+              <CheckCircle2 size={12} /> Approve
             </button>
             <button
               onClick={() => handleAction(row.id, 'reject')}
@@ -167,13 +222,12 @@ export default function LeavePage() {
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 cursor: 'pointer',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px',
-                transition: 'all 0.15s ease'
+                gap: '4px'
               }}
             >
-              <XCircle size={13} /> Reject
+              <XCircle size={12} /> Reject
             </button>
           </div>
         );
@@ -181,8 +235,91 @@ export default function LeavePage() {
     }
   ];
 
+  // 2. Allocations Columns
+  const allocationColumns = [
+    {
+      key: 'employee',
+      label: 'Employee',
+      render: (_, row) => (
+        <div>
+          <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+            {row.employee?.employeeCode || 'EMP-XXXX'}
+          </span>
+        </div>
+      )
+    },
+    {
+      key: 'leaveType',
+      label: 'Time Off Type',
+      render: (_, row) => <span style={{ fontWeight: 600, color: '#0f172a' }}>{row.leaveType?.name || 'General Leave'}</span>
+    },
+    {
+      key: 'allocated',
+      label: 'Allocated Quota',
+      render: (val) => <span style={{ fontWeight: 600, color: '#334155' }}>{val || 20} Days</span>
+    },
+    {
+      key: 'taken',
+      label: 'Taken / Consumed',
+      render: (val) => <span style={{ color: '#e11d48', fontWeight: 600 }}>{val || 0} Days</span>
+    },
+    {
+      key: 'remaining',
+      label: 'Available Balance',
+      render: (val, row) => (
+        <span style={{ color: '#059669', fontWeight: 700 }}>
+          {row.remaining !== undefined ? row.remaining : (row.allocated || 20) - (row.taken || 0)} Days
+        </span>
+      )
+    },
+    {
+      key: 'validity',
+      label: 'Validity Period',
+      render: (_, row) => (
+        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+          {row.validFrom ? new Date(row.validFrom).toLocaleDateString() : 'Annual'}
+        </span>
+      )
+    }
+  ];
+
+  // 3. Types Columns
+  const typeColumns = [
+    {
+      key: 'name',
+      label: 'Leave Type Name',
+      render: (val, row) => (
+        <div>
+          <div style={{ fontWeight: 600, color: '#0f172a' }}>{val}</div>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1' }}>{row.code}</span>
+        </div>
+      )
+    },
+    {
+      key: 'paid',
+      label: 'Compensation Category',
+      render: (val) => (
+        <span className={`badge ${val ? 'badge-success' : 'badge-warning'}`}>
+          {val ? 'Paid Leave' : 'Unpaid (Affects LOP)'}
+        </span>
+      )
+    },
+    {
+      key: 'maxDaysPerYear',
+      label: 'Annual Allocation Cap',
+      render: (val) => <span style={{ fontWeight: 600, color: '#0f172a' }}>{val || 18} Days/Year</span>
+    },
+    {
+      key: 'status',
+      label: 'Policy Status',
+      render: () => <span className="badge badge-success">✓ Active Policy</span>
+    }
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+      {/* Top Banner */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -193,79 +330,171 @@ export default function LeavePage() {
         backgroundColor: '#ffffff',
         border: '1px solid var(--border-color)',
         borderRadius: '16px',
-        background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #eff6ff 100%)',
+        background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%)',
         boxShadow: 'var(--shadow-sm)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-              Leave & Time Off Management
+              Time Off & Leave Management
             </h1>
-            <span className="badge badge-warning">Policies Active</span>
+            <span className="badge badge-warning">Entitlements</span>
           </div>
-          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
-            Manage vacation accruals, sick leave, unpaid LOP deductions, and manager approvals.
+          <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '0.86rem', marginTop: '4px' }}>
+            Manage employee time off allocations, approvals, unpaid deductions (LOP), and policy rules.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Plus size={16} />
-          <span>Apply for Leave</span>
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {isManager && (
+            <button
+              onClick={() => setIsTypeModalOpen(true)}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Layers size={15} />
+              <span>Configure Policy</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Plus size={16} />
+            <span>Apply Leave</span>
+          </button>
+        </div>
       </div>
 
-      {/* Balances Grid */}
+      {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         <StatCard
-          title="Annual Paid Leave"
-          value="18 Days"
-          description="out of 20 days entitlement"
-          color="#10b981"
-          icon={CalendarCheck}
-          badgeText="Accrued"
-        />
-        <StatCard
-          title="Sick Leave Available"
-          value="9 Days"
-          description="out of 10 days policy"
-          color="#0ea5e9"
+          title="Pending Approvals"
+          value={requests.filter(r => r.status === 'PENDING').length}
+          description="Awaiting management review"
+          color="#d97706"
           icon={Clock}
-          badgeText="Medical"
+          badgeText="Action Needed"
         />
         <StatCard
-          title="Unpaid Leave Taken"
-          value="2 Days"
-          description="deductible in payroll (LOP)"
-          color="#f59e0b"
+          title="Approved Requests"
+          value={requests.filter(r => r.status === 'APPROVED').length}
+          description="Consumed in current period"
+          color="#059669"
+          icon={CheckCircle2}
+          badgeText="Approved"
+        />
+        <StatCard
+          title="Leave Types Configured"
+          value={leaveTypes.length || 3}
+          description="Paid & LOP categories"
+          color="#6366f1"
           icon={CalendarCheck}
-          badgeText="LOP Penalty"
+          badgeText="Policy"
         />
       </div>
 
-      <DataTable
-        columns={columns}
-        data={requests}
-        searchPlaceholder="Search leave requests by employee name..."
-      />
+      {/* Sub-Tab Navigation (A4) */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+        <button
+          onClick={() => setActiveTab('requests')}
+          style={{
+            padding: '8px 18px',
+            borderRadius: '10px',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: activeTab === 'requests' ? '1px solid #d97706' : '1px solid transparent',
+            backgroundColor: activeTab === 'requests' ? '#fffbeb' : 'transparent',
+            color: activeTab === 'requests' ? '#b45309' : '#64748b',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Time Off Requests ({requests.length})
+        </button>
 
+        <button
+          onClick={() => setActiveTab('allocations')}
+          style={{
+            padding: '8px 18px',
+            borderRadius: '10px',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            border: activeTab === 'allocations' ? '1px solid #059669' : '1px solid transparent',
+            backgroundColor: activeTab === 'allocations' ? '#ecfdf5' : 'transparent',
+            color: activeTab === 'allocations' ? '#047857' : '#64748b',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          Allocations & Balances ({balances.length})
+        </button>
+
+        {isManager && (
+          <button
+            onClick={() => setActiveTab('types')}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '10px',
+              fontSize: '0.86rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: activeTab === 'types' ? '1px solid #6366f1' : '1px solid transparent',
+              backgroundColor: activeTab === 'types' ? '#eef2ff' : 'transparent',
+              color: activeTab === 'types' ? '#4338ca' : '#64748b',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Time Off Policies ({leaveTypes.length})
+          </button>
+        )}
+      </div>
+
+      {/* Main Table for Active Tab */}
+      {activeTab === 'requests' && (
+        <DataTable
+          columns={requestColumns}
+          data={requests}
+          loading={loading}
+          searchPlaceholder="Search leave requests..."
+        />
+      )}
+
+      {activeTab === 'allocations' && (
+        <DataTable
+          columns={allocationColumns}
+          data={balances}
+          loading={loading}
+          searchPlaceholder="Search employee leave allocations..."
+        />
+      )}
+
+      {activeTab === 'types' && (
+        <DataTable
+          columns={typeColumns}
+          data={leaveTypes}
+          loading={loading}
+          searchPlaceholder="Search configured leave policies..."
+        />
+      )}
+
+      {/* Apply Leave Modal */}
       {isModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Submit Leave Request</h2>
+          <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Apply for Time Off</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleApplyLeave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <form onSubmit={handleApplyLeave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Leave Type *</label>
                 <select
@@ -276,12 +505,12 @@ export default function LeavePage() {
                 >
                   <option value="">Select Leave Type...</option>
                   {leaveTypes.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name} ({t.paid ? 'Paid' : 'Unpaid'})</option>
+                    <option key={t.id} value={t.id}>{t.name} ({t.paid ? 'Paid' : 'Unpaid LOP'})</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Start Date *</label>
                   <input
@@ -305,17 +534,17 @@ export default function LeavePage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reason / Notes</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reason</label>
                 <textarea
                   rows="3"
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                  placeholder="Optional details for approving manager..."
-                  className="form-textarea"
+                  className="form-input"
+                  placeholder="State reason for time off request..."
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -328,6 +557,77 @@ export default function LeavePage() {
                   className="btn btn-primary"
                 >
                   Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Configure Leave Policy Type Modal (A4) */}
+      {isTypeModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Configure Leave Policy</h2>
+              <button
+                onClick={() => setIsTypeModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateType} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Policy Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={typeForm.name}
+                  onChange={(e) => setTypeForm({ ...typeForm, name: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g. Maternity / Paternity Leave"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Annual Quota (Days)</label>
+                  <input
+                    type="number"
+                    required
+                    value={typeForm.maxDaysPerYear}
+                    onChange={(e) => setTypeForm({ ...typeForm, maxDaysPerYear: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Compensation</label>
+                  <select
+                    value={typeForm.paid ? 'true' : 'false'}
+                    onChange={(e) => setTypeForm({ ...typeForm, paid: e.target.value === 'true' })}
+                    className="form-select"
+                  >
+                    <option value="true">Paid Leave</option>
+                    <option value="false">Unpaid (Loss of Pay)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsTypeModalOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  Save Policy
                 </button>
               </div>
             </form>

@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/Common/DataTable';
-import { Clock, Calendar, CheckCircle2, AlertTriangle, Plus, X } from 'lucide-react';
+import { Clock, Calendar, CheckCircle2, AlertTriangle, Plus, X, LogIn, LogOut } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AttendancePage() {
+  const { user, hasRole } = useAuth();
+  const isManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
+
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
+  const [todayPunch, setTodayPunch] = useState(null);
+  const [punchLoading, setPunchLoading] = useState(false);
 
   const [correctionData, setCorrectionData] = useState({
     employeeId: '',
@@ -18,24 +24,43 @@ export default function AttendancePage() {
     remarks: 'Manual biometric adjustment'
   });
 
+  const fetchTodayPunch = async () => {
+    try {
+      const { data } = await api.get('/attendance/my-today');
+      setTodayPunch(data.data);
+    } catch (e) {
+      // Optional if not punched today
+    }
+  };
+
+  const handlePunch = async (action) => {
+    setPunchLoading(true);
+    try {
+      await api.post(`/attendance/${action}`);
+      toast.success(action === 'check-in' ? 'Clocked in successfully!' : 'Clocked out successfully!');
+      fetchTodayPunch();
+      fetchAttendance();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Action failed');
+    } finally {
+      setPunchLoading(false);
+    }
+  };
+
   const fetchAttendance = async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/attendance');
       setLogs(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
-      setLogs([
-        { id: '1', employee: { firstName: 'John', lastName: 'Doe', code: 'EMP-0001' }, date: '2026-03-05', checkIn: '2026-03-05T09:02:00Z', checkOut: '2026-03-05T17:30:00Z', status: 'PRESENT', totalHours: 8.46 },
-        { id: '2', employee: { firstName: 'Jane', lastName: 'Smith', code: 'EMP-0002' }, date: '2026-03-05', checkIn: '2026-03-05T09:45:00Z', checkOut: '2026-03-05T18:15:00Z', status: 'LATE', totalHours: 8.5 },
-        { id: '3', employee: { firstName: 'Michael', lastName: 'Brown', code: 'EMP-0003' }, date: '2026-03-05', checkIn: null, checkOut: null, status: 'ON_LEAVE', totalHours: 0 },
-        { id: '4', employee: { firstName: 'Sarah', lastName: 'Connor', code: 'EMP-0004' }, date: '2026-03-05', checkIn: '2026-03-05T08:58:00Z', checkOut: null, status: 'PRESENT', totalHours: 3.2 },
-      ]);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchEmployees = async () => {
+    if (!isManager) return;
     try {
       const { data } = await api.get('/employees');
       setEmployees(data.data?.items || (Array.isArray(data.data) ? data.data : []));
@@ -44,18 +69,19 @@ export default function AttendancePage() {
 
   useEffect(() => {
     fetchAttendance();
-    fetchEmployees();
-  }, []);
+    fetchTodayPunch();
+    if (isManager) fetchEmployees();
+  }, [isManager]);
 
   const handleManualAdjustment = async (e) => {
     e.preventDefault();
     try {
       await api.post('/attendance/manual-entry', correctionData);
-      toast.success('Attendance record updated');
+      toast.success('Attendance record recorded successfully');
       setIsModalOpen(false);
       fetchAttendance();
     } catch (err) {
-      toast.error(err.response?.data?.error?.message || 'Failed to adjust attendance');
+      toast.error(err.response?.data?.error?.message || 'Failed to record attendance');
     }
   };
 
@@ -126,24 +152,102 @@ export default function AttendancePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-              Workforce Attendance
+              {isManager ? 'Workforce Attendance' : 'My Attendance & Shift Punches'}
             </h1>
             <span className="badge badge-green">Live Tracking</span>
           </div>
           <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
-            Daily check-in logs, biometric punches, hours tracked, and punch regularization.
+            {isManager
+              ? 'Daily check-in logs, biometric punches, hours tracked, and punch regularization.'
+              : 'View your personal daily shift records, clock in/out, and verify your logged working hours.'}
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Plus size={16} />
-          <span>Manual Entry</span>
-        </button>
+        {/* Action: Manual Entry for Managers, or Live Punch for Employees */}
+        {isManager ? (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Plus size={16} />
+            <span>Manual Entry</span>
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {!todayPunch?.checkIn || todayPunch?.checkOut ? (
+              <button
+                onClick={() => handlePunch('check-in')}
+                disabled={punchLoading}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#059669',
+                  borderColor: '#059669',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                <LogIn size={16} />
+                <span>{todayPunch?.checkOut ? 'Clock In (Resume)' : 'Clock In Now'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => handlePunch('check-out')}
+                disabled={punchLoading}
+                className="btn btn-primary"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: '#dc2626',
+                  borderColor: '#dc2626',
+                  boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                <LogOut size={16} />
+                <span>Clock Out</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Today Punch Status Bar for Employees */}
+      {!isManager && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '14px 20px',
+          backgroundColor: todayPunch?.checkIn && !todayPunch?.checkOut ? '#ecfdf5' : '#f8fafc',
+          border: todayPunch?.checkIn && !todayPunch?.checkOut ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
+          borderRadius: '12px',
+          fontSize: '0.86rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Clock size={18} color={todayPunch?.checkIn && !todayPunch?.checkOut ? '#059669' : '#64748b'} />
+            <div>
+              <span style={{ fontWeight: 700, color: '#0f172a' }}>Today's Shift Status: </span>
+              {todayPunch?.checkIn && !todayPunch?.checkOut ? (
+                <span style={{ color: '#059669', fontWeight: 600 }}>
+                  Active Shift (Clocked in at {new Date(todayPunch.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              ) : todayPunch?.checkOut ? (
+                <span style={{ color: '#475569' }}>
+                  Shift Completed ({todayPunch.workedHours} hrs logged, clocked out at {new Date(todayPunch.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                </span>
+              ) : (
+                <span style={{ color: '#94a3b8' }}>Not clocked in today</span>
+              )}
+            </div>
+          </div>
+          <span className={`badge ${todayPunch?.checkIn && !todayPunch?.checkOut ? 'badge-success' : 'badge-blue'}`}>
+            {todayPunch?.status || 'PENDING'}
+          </span>
+        </div>
+      )}
 
       <DataTable
         columns={columns}

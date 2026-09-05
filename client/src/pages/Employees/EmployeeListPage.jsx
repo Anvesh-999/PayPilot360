@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DataTable from '../../components/Common/DataTable';
-import { Plus, User, Mail, Building, Briefcase, Eye, CheckCircle2, X, Search, Filter, Phone, Calendar, Edit2, Trash2 } from 'lucide-react';
+import {
+  Plus, User, Mail, Building, Briefcase, Eye, CheckCircle2, X, Search, Filter, Phone, Calendar,
+  Edit2, Trash2, LayoutGrid, List, FileText, Clock, CalendarCheck, Receipt, ArrowUpRight
+} from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -25,8 +29,10 @@ function getAvatarGradient(name = '') {
 }
 
 export default function EmployeeListPage() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'kanban'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -165,9 +171,51 @@ export default function EmployeeListPage() {
     }
   };
 
+  const handleQuickChangeDepartment = async (empId, newDeptId) => {
+    try {
+      await api.put(`/employees/${empId}`, { departmentId: newDeptId || null });
+      toast.success('Department updated successfully');
+      fetchEmployees();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to update department');
+    }
+  };
+
+  const handleOpenOnboardWithDept = (deptId) => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      departmentId: deptId || '',
+      jobPositionId: '',
+      joiningDate: new Date().toISOString().split('T')[0],
+      status: 'ACTIVE',
+    });
+    setIsModalOpen(true);
+  };
+
+  // Dynamically derive all active departments from backend + employee records
+  const allDepartmentNames = useMemo(() => {
+    const set = new Set();
+    departments.forEach(d => { if (d.name) set.add(d.name); });
+    employees.forEach(e => {
+      if (e.department?.name) set.add(e.department.name);
+    });
+    if (set.size === 0) {
+      ['Engineering', 'Sales', 'HR & Admin'].forEach(d => set.add(d));
+    }
+    const list = Array.from(set);
+    if (employees.some(e => !e.department || !e.department?.name)) {
+      list.push('Unassigned');
+    }
+    return list;
+  }, [departments, employees]);
+
   // Filter employees by department
   const filteredEmployees = useMemo(() => {
     if (selectedDept === 'ALL') return employees;
+    if (selectedDept === 'Unassigned') return employees.filter(emp => !emp.department || !emp.department?.name);
     return employees.filter(emp => emp.department?.name === selectedDept);
   }, [employees, selectedDept]);
 
@@ -344,37 +392,266 @@ export default function EmployeeListPage() {
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginRight: '6px' }}>Filter by Dept:</span>
-        {['ALL', 'Engineering', 'Sales', 'HR & Admin'].map((dept) => (
+      {/* Filter and View Toggle Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginRight: '6px' }}>Filter by Dept:</span>
+          {['ALL', ...allDepartmentNames].map((dept) => (
+            <button
+              key={dept}
+              onClick={() => setSelectedDept(dept)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '999px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                border: selectedDept === dept ? '1px solid #6366f1' : '1px solid #e2e8f0',
+                backgroundColor: selectedDept === dept ? '#eef2ff' : '#ffffff',
+                color: selectedDept === dept ? '#4338ca' : '#64748b',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {dept === 'ALL' ? 'All Units' : dept}
+            </button>
+          ))}
+        </div>
+
+        {/* View Mode Switcher (List vs Kanban) */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: '#f1f5f9',
+          padding: '3px',
+          borderRadius: '10px',
+          border: '1px solid #e2e8f0',
+          gap: '2px'
+        }}>
           <button
-            key={dept}
-            onClick={() => setSelectedDept(dept)}
+            onClick={() => setViewMode('list')}
             style={{
-              padding: '6px 14px',
-              borderRadius: '999px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '7px',
               fontSize: '0.78rem',
               fontWeight: 600,
               cursor: 'pointer',
-              border: selectedDept === dept ? '1px solid #6366f1' : '1px solid #e2e8f0',
-              backgroundColor: selectedDept === dept ? '#eef2ff' : '#ffffff',
-              color: selectedDept === dept ? '#4338ca' : '#64748b',
+              border: 'none',
+              backgroundColor: viewMode === 'list' ? '#ffffff' : 'transparent',
+              color: viewMode === 'list' ? '#1e293b' : '#64748b',
+              boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
               transition: 'all 0.15s ease'
             }}
           >
-            {dept === 'ALL' ? 'All Units' : dept}
+            <List size={14} /> List View
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('kanban')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '7px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: 'none',
+              backgroundColor: viewMode === 'kanban' ? '#ffffff' : 'transparent',
+              color: viewMode === 'kanban' ? '#6366f1' : '#64748b',
+              boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <LayoutGrid size={14} /> Kanban Board
+          </button>
+        </div>
       </div>
 
-      {/* Main Table */}
-      <DataTable
-        columns={columns}
-        data={filteredEmployees}
-        loading={loading}
-        searchPlaceholder="Search employees by name, email, or staff code..."
-      />
+      {/* Main View: Table List or Kanban Board */}
+      {viewMode === 'list' ? (
+        <DataTable
+          columns={columns}
+          data={filteredEmployees}
+          loading={loading}
+          searchPlaceholder="Search employees by name, email, or staff code..."
+        />
+      ) : (
+        /* Dynamic Kanban Board View across all departments */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
+          gap: '18px',
+          alignItems: 'start'
+        }}>
+          {(selectedDept === 'ALL' ? allDepartmentNames : [selectedDept]).map((deptName) => {
+            const deptStaff = employees.filter(e => {
+              if (deptName === 'Unassigned') {
+                return !e.department || !e.department?.name;
+              }
+              return e.department?.name === deptName;
+            });
+            const deptObj = departments.find(d => d.name === deptName);
+
+            return (
+              <div
+                key={deptName}
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '14px',
+                  border: '1px solid #e2e8f0',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  minHeight: '220px'
+                }}
+              >
+                {/* Column Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#0f172a' }}>{deptName}</span>
+                    <span className="badge badge-purple" style={{ fontSize: '0.72rem' }}>{deptStaff.length}</span>
+                  </div>
+                  {deptObj && (
+                    <button
+                      onClick={() => handleOpenOnboardWithDept(deptObj.id)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '3px 8px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      title={`Add staff directly to ${deptName}`}
+                    >
+                      <Plus size={12} /> Add
+                    </button>
+                  )}
+                </div>
+
+                {/* Cards List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {deptStaff.length === 0 ? (
+                    <div style={{ padding: '30px 12px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+                      No staff members in this unit
+                    </div>
+                  ) : (
+                    deptStaff.map((emp) => (
+                      <div
+                        key={emp.id}
+                        className="card table-row-hover"
+                        style={{
+                          padding: '16px',
+                          borderRadius: '12px',
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        {/* Header: Avatar + Name + Code */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '10px',
+                            background: getAvatarGradient(emp.firstName),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            fontSize: '0.9rem',
+                            flexShrink: 0
+                          }}>
+                            {emp.firstName?.[0]}{emp.lastName?.[0]}
+                          </div>
+                          <div style={{ overflow: 'hidden', flex: 1 }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                              {emp.firstName} {emp.lastName}
+                            </div>
+                            <span style={{ fontFamily: 'monospace', fontSize: '0.74rem', color: '#6366f1', fontWeight: 600 }}>
+                              {emp.employeeCode || emp.code}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Briefcase size={13} color="#94a3b8" />
+                            <span>{emp.jobPosition?.title || 'Staff Member'}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Mail size={13} color="#94a3b8" />
+                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{emp.email}</span>
+                          </div>
+                          {/* Quick Department Reassignment */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                            <Building size={13} color="#94a3b8" />
+                            <select
+                              value={emp.departmentId || emp.department?.id || ''}
+                              onChange={(e) => handleQuickChangeDepartment(emp.id, e.target.value)}
+                              style={{
+                                fontSize: '0.74rem',
+                                padding: '3px 6px',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                backgroundColor: '#f8fafc',
+                                color: '#1e293b',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                width: '100%'
+                              }}
+                              title="Reassign Department"
+                            >
+                              <option value="">(Unassigned)</option>
+                              {departments.map((d) => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Bottom Actions Bar */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>● {emp.employmentStatus || emp.status || 'ACTIVE'}</span>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button
+                              onClick={() => { setSelectedEmployee(emp); setIsDetailOpen(true); }}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '4px 8px' }}
+                              title="Inspect Form & History"
+                            >
+                              <Eye size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(emp)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '4px 8px', color: '#4f46e5' }}
+                              title="Edit Employee Details"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEmployee(emp)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '4px 8px', color: '#e11d48' }}
+                              title="Terminate / Delete Employee"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Onboard Employee Modal */}
       {isModalOpen && (
@@ -670,6 +947,102 @@ export default function EmployeeListPage() {
                   {selectedEmployee.employeeCode || selectedEmployee.code}
                 </span>
               </div>
+            </div>
+
+            {/* Smart-Buttons Navigation Bar (A1, B2) */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: '8px',
+              marginBottom: '20px',
+              padding: '8px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <button
+                type="button"
+                onClick={() => { setIsDetailOpen(false); navigate('/contracts'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 4px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <FileText size={15} color="#0284c7" />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Contracts</span>
+                <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Active</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsDetailOpen(false); navigate('/attendance'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 4px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Clock size={15} color="#059669" />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Attendance</span>
+                <span className="badge badge-success" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Punches</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsDetailOpen(false); navigate('/leave'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 4px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <CalendarCheck size={15} color="#d97706" />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Time Off</span>
+                <span className="badge badge-warning" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Requests</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setIsDetailOpen(false); navigate('/payslips'); }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '8px 4px',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <Receipt size={15} color="#7c3aed" />
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Payslips</span>
+                <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>History</span>
+              </button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '0.88rem' }}>
