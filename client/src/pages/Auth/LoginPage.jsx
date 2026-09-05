@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@peoplepay360.com');
-  const [password, setPassword] = useState('Password123!');
+  const [password, setPassword] = useState('Password@123');
   const [loading, setLoading] = useState(false);
   
   const { login } = useAuth();
@@ -188,7 +188,7 @@ export default function LoginPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
             <button
               type="button"
-              onClick={() => handleQuickFill('admin@peoplepay360.com', 'Password123!')}
+              onClick={() => handleQuickFill('admin@peoplepay360.com', 'Password@123')}
               style={{
                 padding: '8px',
                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -204,7 +204,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFill('hrmanager@peoplepay360.com', 'Password123!')}
+              onClick={() => handleQuickFill('hr.manager@peoplepay360.com', 'Password@123')}
               style={{
                 padding: '8px',
                 backgroundColor: 'rgba(168, 85, 247, 0.1)',
@@ -220,7 +220,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFill('payroll@peoplepay360.com', 'Password123!')}
+              onClick={() => handleQuickFill('payroll.manager@peoplepay360.com', 'Password@123')}
               style={{
                 padding: '8px',
                 backgroundColor: 'rgba(14, 165, 233, 0.1)',
@@ -236,7 +236,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              onClick={() => handleQuickFill('employee@peoplepay360.com', 'Password123!')}
+              onClick={() => handleQuickFill('aisha.verma@peoplepay360.com', 'Password@123')}
               style={{
                 padding: '8px',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
