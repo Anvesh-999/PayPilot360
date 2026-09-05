@@ -135,7 +135,7 @@ const payrunCreateSchema = z.object({
   name: z.string().min(1).max(200),
   periodStart: z.coerce.date(),
   periodEnd: z.coerce.date(),
-  salaryStructureId: z.string().uuid(),
+  salaryStructureId: z.string().uuid().optional().nullable(),
 }).refine(
   (data) => data.periodEnd > data.periodStart,
   { message: 'Period end must be after period start', path: ['periodEnd'] }

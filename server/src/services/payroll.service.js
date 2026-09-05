@@ -13,7 +13,7 @@ const VALID_TRANSITIONS = {
   CALCULATING: ['CALCULATED'],
   CALCULATED: ['REVIEW', 'CALCULATING'], // Can recalculate
   REVIEW: ['APPROVED', 'CALCULATING'],   // Can recalculate
-  APPROVED: ['FINALIZED'],
+  APPROVED: ['FINALIZED', 'PAID'],       // Can finalize or directly mark paid
   FINALIZED: ['PAID'],
   PAID: [],
 };
@@ -23,12 +23,18 @@ class PayrollService {
    * Create a new payrun (Step 1 — scope + period).
    */
   async createPayrun(data, createdById) {
+    let salaryStructureId = data.salaryStructureId;
+    if (!salaryStructureId) {
+      const defaultStructure = await prisma.salaryStructure.findFirst({ where: { active: true } });
+      salaryStructureId = defaultStructure?.id;
+    }
+
     return prisma.payrun.create({
       data: {
         name: data.name,
         periodStart: data.periodStart,
         periodEnd: data.periodEnd,
-        salaryStructureId: data.salaryStructureId,
+        salaryStructureId,
         status: 'DRAFT',
         createdById,
       },
@@ -406,7 +412,7 @@ class PayrollService {
    */
   async markPaid(payrunId) {
     const payrun = await this.getPayrun(payrunId);
-    this.assertStatus(payrun, ['FINALIZED']);
+    this.assertStatus(payrun, ['FINALIZED', 'APPROVED']);
 
     // Update all payslips to PAID
     await prisma.payslip.updateMany({
@@ -416,7 +422,10 @@ class PayrollService {
 
     const updatedPayrun = await prisma.payrun.update({
       where: { id: payrunId },
-      data: { status: 'PAID' },
+      data: {
+        status: 'PAID',
+        finalizedAt: payrun.finalizedAt || new Date(),
+      },
       include: { payslips: true, salaryStructure: true },
     });
 
@@ -426,6 +435,50 @@ class PayrollService {
     });
 
     return updatedPayrun;
+  }
+
+  /**
+   * Sync and automatically enroll any eligible employees who have active contracts for the payrun period
+   */
+  async syncEligibleEmployees(payrunId) {
+    const payrun = await this.getPayrun(payrunId);
+    this.assertStatus(payrun, ['DRAFT', 'CALCULATED', 'REVIEW']);
+
+    const eligible = await this.getEligibleEmployees(payrunId);
+    const eligibleWithContract = eligible.filter(e => e.hasContract);
+
+    const existingPayslips = await prisma.payslip.findMany({
+      where: { payrunId },
+      select: { employeeId: true },
+    });
+    const enrolledIds = new Set(existingPayslips.map(p => p.employeeId));
+
+    const newlyAdded = [];
+    for (const emp of eligibleWithContract) {
+      if (!enrolledIds.has(emp.id)) {
+        const contract = emp.contracts[0];
+        await prisma.payslip.create({
+          data: {
+            payrunId,
+            employeeId: emp.id,
+            contractId: contract.id,
+            grossSalary: 0,
+            totalDeductions: 0,
+            netSalary: 0,
+            workedDays: 0,
+            status: 'DRAFT',
+          },
+        });
+        newlyAdded.push(`${emp.firstName} ${emp.lastName}`);
+      }
+    }
+
+    return {
+      success: true,
+      totalEligible: eligibleWithContract.length,
+      newlyAddedCount: newlyAdded.length,
+      newlyAdded,
+    };
   }
 
   // ─── List & Detail ────────────────────────────────────
@@ -460,7 +513,7 @@ class PayrollService {
         payslips: {
           include: {
             employee: {
-              select: { id: true, firstName: true, lastName: true, employeeCode: true, department: { select: { name: true } } },
+              select: { id: true, firstName: true, lastName: true, employeeCode: true, email: true, department: { select: { name: true } } },
             },
             contract: true,
             lines: { orderBy: { sequence: 'asc' } },
@@ -470,7 +523,28 @@ class PayrollService {
     });
 
     if (!payrun) throw new AppError('Payrun not found', 404, 'NOT_FOUND');
-    return payrun;
+
+    const totalGross = payrun.payslips.reduce((sum, p) => sum + parseFloat(p.grossSalary || 0), 0);
+    const totalDeductions = payrun.payslips.reduce((sum, p) => sum + parseFloat(p.totalDeductions || 0), 0);
+    const totalNet = payrun.payslips.reduce((sum, p) => sum + parseFloat(p.netSalary || 0), 0);
+
+    return {
+      ...payrun,
+      totalGross: Math.round(totalGross * 100) / 100,
+      totalDeductions: Math.round(totalDeductions * 100) / 100,
+      totalNet: Math.round(totalNet * 100) / 100,
+      payrunItems: payrun.payslips.map(p => ({
+        id: p.id,
+        employee: p.employee,
+        basic: p.lines?.find(l => l.ruleCode === 'BASIC')?.amount ?? p.contract?.basicWage ?? 0,
+        grossPay: p.grossSalary,
+        totalDeductions: p.totalDeductions,
+        netPay: p.netSalary,
+        workedDays: p.workedDays,
+        status: p.status,
+        lines: p.lines,
+      })),
+    };
   }
 
   // ─── Helpers ──────────────────────────────────────────

@@ -4,6 +4,15 @@ const { AppError } = require('../middleware/errorHandler');
 
 // Create a restricted mathjs instance for safe expression evaluation
 const math = create(all);
+math.import({
+  equal: function(a, b) {
+    return a === b || a == b;
+  },
+  unequal: function(a, b) {
+    return a !== b && a != b;
+  }
+}, { override: true });
+
 const limitedScope = {
   // Only expose safe math functions
   abs: Math.abs,
@@ -34,6 +43,14 @@ class SalaryRuleEngineService {
       return seqA - seqB;
     });
 
+    // Pre-populate all rule codes with 0 so formulas referencing conditionally skipped rules won't fail with undefined symbol
+    for (const ruleEntry of sortedRules) {
+      const rule = ruleEntry.salaryRule || ruleEntry;
+      if (rule.code && computedValues[rule.code] === undefined) {
+        computedValues[rule.code] = 0;
+      }
+    }
+
     for (const ruleEntry of sortedRules) {
       const rule = ruleEntry.salaryRule || ruleEntry;
 
@@ -55,7 +72,11 @@ class SalaryRuleEngineService {
       try {
         switch (rule.computationType) {
           case 'FIXED':
-            amount = parseFloat(rule.fixedAmount) || 0;
+            if ((rule.code === 'BASIC' || rule.category === 'BASIC') && (context.BASIC !== undefined || context.contract?.basicWage !== undefined)) {
+              amount = parseFloat(context.BASIC ?? context.contract?.basicWage ?? 0);
+            } else {
+              amount = parseFloat(rule.fixedAmount) || 0;
+            }
             break;
 
           case 'PERCENTAGE': {
@@ -133,11 +154,14 @@ class SalaryRuleEngineService {
    */
   safeEval(expression, context) {
     try {
-      // Build a safe scope from context (only numbers and strings)
+      // Build a safe scope from context
       const scope = { ...limitedScope };
       for (const [key, value] of Object.entries(context)) {
-        if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
-          scope[key] = typeof value === 'string' ? (parseFloat(value) || 0) : value;
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          scope[key] = value;
+        } else if (typeof value === 'string') {
+          const num = parseFloat(value);
+          scope[key] = isNaN(num) ? value : num;
         }
       }
 
@@ -158,10 +182,8 @@ class SalaryRuleEngineService {
         .replace(/attendance\.(\w+)/g, 'attendance_$1')
         .replace(/leave\.(\w+)/g, 'leave_$1');
 
-      // Replace == with equality check
-      safeExpr = safeExpr.replace(/==/g, '==');
-
       const result = math.evaluate(safeExpr, scope);
+      if (typeof result === 'boolean') return result;
       return typeof result === 'number' ? result : parseFloat(result) || 0;
     } catch (err) {
       throw new Error(`Expression evaluation failed: ${expression} — ${err.message}`);

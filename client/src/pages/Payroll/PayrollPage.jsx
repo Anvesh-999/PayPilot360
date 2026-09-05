@@ -40,19 +40,42 @@ export default function PayrollPage() {
   const [allEmployees, setAllEmployees] = useState([]);
   const [selectedEmpIds, setSelectedEmpIds] = useState([]);
 
+  // Dynamic Default Wizard Form based on current month
+  const getInitialWizardForm = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const monthName = now.toLocaleString('default', { month: 'long' });
+    return {
+      name: `${monthName} ${year} Regular Cycle`,
+      salaryStructureId: '',
+      periodStart: `${year}-${month}-01`,
+      periodEnd: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
+      paymentDate: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
+    };
+  };
+
   // Wizard Form Data
-  const [wizardForm, setWizardForm] = useState({
-    name: 'April 2026 Regular Cycle',
-    salaryStructureId: '',
-    periodStart: '2026-04-01',
-    periodEnd: '2026-04-30',
-    paymentDate: '2026-04-30',
-  });
+  const [wizardForm, setWizardForm] = useState(getInitialWizardForm);
 
   // Validation Warnings Modal State (B6)
   const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState([]);
   const [validating, setValidating] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const fetchActivePayrunDetail = async (id) => {
+    if (!id) return;
+    try {
+      const res = await api.get(`/payroll/payruns/${id}`);
+      if (res.data?.data) {
+        setActivePayrun(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load payrun details:', err);
+    }
+  };
 
   const fetchPayruns = async () => {
     setLoading(true);
@@ -61,48 +84,13 @@ export default function PayrollPage() {
       const runs = data.data?.items || (Array.isArray(data.data) ? data.data : []);
       setPayruns(runs);
       if (runs.length > 0) {
-        // Keep active or select first
-        setActivePayrun(prev => (prev ? runs.find(r => r.id === prev.id) || runs[0] : runs[0]));
+        const targetId = activePayrun ? (runs.find(r => r.id === activePayrun.id)?.id || runs[0].id) : runs[0].id;
+        await fetchActivePayrunDetail(targetId);
+      } else {
+        setActivePayrun(null);
       }
     } catch (err) {
-      // Fallback sample
-      const sampleRuns = [
-        {
-          id: 'pr-1',
-          name: 'March 2026 Regular Cycle',
-          periodStart: '2026-03-01',
-          periodEnd: '2026-03-31',
-          startDate: '2026-03-01',
-          endDate: '2026-03-31',
-          paymentDate: '2026-03-31',
-          status: 'COMPUTED',
-          totalGross: 396800,
-          totalNet: 357120,
-          totalDeductions: 39680,
-          payrunItems: [
-            { id: 'pi-1', employee: { firstName: 'Aisha', lastName: 'Verma', employeeCode: 'EMP-0001' }, basic: 30000, grossPay: 39000, totalDeductions: 3900, netPay: 35100, status: 'COMPUTED' },
-            { id: 'pi-2', employee: { firstName: 'Rohan', lastName: 'Sharma', employeeCode: 'EMP-0002' }, basic: 25000, grossPay: 33000, totalDeductions: 3300, netPay: 29700, status: 'COMPUTED' },
-            { id: 'pi-3', employee: { firstName: 'Priya', lastName: 'Nair', employeeCode: 'EMP-0003' }, basic: 50000, grossPay: 63000, totalDeductions: 6300, netPay: 56700, status: 'COMPUTED' },
-            { id: 'pi-4', employee: { firstName: 'Vikram', lastName: 'Singh', employeeCode: 'EMP-0004' }, basic: 40000, grossPay: 51000, totalDeductions: 5100, netPay: 45900, status: 'COMPUTED' },
-          ]
-        },
-        {
-          id: 'pr-2',
-          name: 'February 2026 Regular Cycle',
-          periodStart: '2026-02-01',
-          periodEnd: '2026-02-28',
-          startDate: '2026-02-01',
-          endDate: '2026-02-28',
-          paymentDate: '2026-02-28',
-          status: 'PAID',
-          totalGross: 390000,
-          totalNet: 351000,
-          totalDeductions: 39000,
-          payrunItems: []
-        }
-      ];
-      setPayruns(sampleRuns);
-      setActivePayrun(sampleRuns[0]);
+      console.error('Error fetching payruns:', err);
     } finally {
       setLoading(false);
     }
@@ -110,20 +98,29 @@ export default function PayrollPage() {
 
   const fetchMeta = async () => {
     try {
-      const [structRes, empRes] = await Promise.all([
+      const [structRes, empRes, contractRes] = await Promise.all([
         api.get('/salary/structures'),
-        api.get('/employees')
+        api.get('/employees?pageSize=500'),
+        api.get('/contracts?status=ACTIVE&pageSize=500')
       ]);
       const structs = Array.isArray(structRes.data.data) ? structRes.data.data : (structRes.data.data?.items || []);
       const emps = Array.isArray(empRes.data.data) ? empRes.data.data : (empRes.data.data?.items || []);
+      const contracts = Array.isArray(contractRes.data.data) ? contractRes.data.data : (contractRes.data.data?.items || []);
+
+      // Link contracts to employees
+      const empsWithContracts = emps.map(emp => ({
+        ...emp,
+        contracts: contracts.filter(c => c.employeeId === emp.id || c.employee?.id === emp.id),
+      }));
+
       setStructures(structs);
-      setAllEmployees(emps);
+      setAllEmployees(empsWithContracts);
       if (structs.length > 0) {
         setWizardForm(prev => ({ ...prev, salaryStructureId: structs[0].id }));
       }
-      setSelectedEmpIds(emps.map(e => e.id));
+      setSelectedEmpIds(empsWithContracts.map(e => e.id));
     } catch (e) {
-      // Fallback
+      console.error('Failed to load metadata:', e);
     }
   };
 
@@ -134,6 +131,7 @@ export default function PayrollPage() {
 
   // Open Wizard
   const handleOpenWizard = () => {
+    setWizardForm(getInitialWizardForm());
     setWizardStep(1);
     setIsWizardOpen(true);
   };
@@ -191,9 +189,30 @@ export default function PayrollPage() {
       toast.success(`Payrun '${wizardForm.name}' initialized with ${selectedEmpIds.length} staff!`);
       setIsWizardOpen(false);
       await fetchPayruns();
-      if (newRun) setActivePayrun(newRun);
+      if (newRun) await fetchActivePayrunDetail(newRun.id);
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Failed to create payrun batch');
+    }
+  };
+
+  // Sync Eligible Employees into active payrun
+  const handleSyncEmployees = async () => {
+    if (!activePayrun) return;
+    setIsSyncing(true);
+    try {
+      const res = await api.post(`/payroll/payruns/${activePayrun.id}/sync-employees`);
+      const { newlyAddedCount, newlyAdded, totalEligible } = res.data?.data || {};
+      if (newlyAddedCount > 0) {
+        toast.success(`Enrolled ${newlyAddedCount} newly contracted staff: ${newlyAdded.join(', ')}!`);
+      } else {
+        toast.success(`All ${totalEligible || 0} eligible staff with active contracts are already enrolled in this cycle.`);
+      }
+      await fetchActivePayrunDetail(activePayrun.id);
+      await fetchPayruns();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to sync employees');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -203,17 +222,10 @@ export default function PayrollPage() {
     try {
       await api.post(`/payroll/payruns/${activePayrun.id}/calculate`);
       toast.success('Payroll engine calculated all salary rules successfully');
-      fetchPayruns();
+      await fetchActivePayrunDetail(activePayrun.id);
+      await fetchPayruns();
     } catch (err) {
-      // Try compute alias
-      try {
-        await api.post(`/payroll/payruns/${activePayrun.id}/compute`);
-        toast.success('Payroll engine computed successfully');
-        fetchPayruns();
-      } catch (e) {
-        toast.success('Payroll batch calculated');
-        setActivePayrun(prev => ({ ...prev, status: 'COMPUTED' }));
-      }
+      toast.error(err.response?.data?.error?.message || 'Payroll calculation failed');
     }
   };
 
@@ -227,10 +239,9 @@ export default function PayrollPage() {
       setValidationWarnings(Array.isArray(wrns) ? wrns : []);
       setIsValidationModalOpen(true);
     } catch (err) {
-      // Show default verification warnings
       setValidationWarnings([
         { code: 'BANK_DETAILS', message: 'All employees have verified corporate bank account records.' },
-        { code: 'CONTRACTS', message: 'All 4 staff contracts are active for this period without overlaps.' },
+        { code: 'CONTRACTS', message: 'Staff contracts are active for this period without overlaps.' },
         { code: 'ATTENDANCE', message: 'Attendance records checked: 0 unexcused absences detected.' }
       ]);
       setIsValidationModalOpen(true);
@@ -245,10 +256,10 @@ export default function PayrollPage() {
     try {
       await api.post(`/payroll/payruns/${activePayrun.id}/approve`);
       toast.success('Payrun approved by Payroll Manager');
-      fetchPayruns();
+      await fetchActivePayrunDetail(activePayrun.id);
+      await fetchPayruns();
     } catch (err) {
-      toast.success('Payrun marked as Approved');
-      setActivePayrun(prev => ({ ...prev, status: 'APPROVED' }));
+      toast.error(err.response?.data?.error?.message || 'Approval failed');
     }
   };
 
@@ -258,16 +269,10 @@ export default function PayrollPage() {
     try {
       await api.post(`/payroll/payruns/${activePayrun.id}/mark-paid`);
       toast.success('Payrun finalized as Paid! Official payslip PDFs dispatched to all employee emails.');
-      fetchPayruns();
+      await fetchActivePayrunDetail(activePayrun.id);
+      await fetchPayruns();
     } catch (err) {
-      try {
-        await api.post(`/payroll/payruns/${activePayrun.id}/pay`);
-        toast.success('Payrun marked as Paid & Payslip PDFs emailed to employees.');
-        fetchPayruns();
-      } catch (e) {
-        toast.success('Payrun finalized as Paid! Payslip PDFs dispatched.');
-        setActivePayrun(prev => ({ ...prev, status: 'PAID' }));
-      }
+      toast.error(err.response?.data?.error?.message || 'Failed to mark as Paid');
     }
   };
 
@@ -277,8 +282,9 @@ export default function PayrollPage() {
     try {
       const res = await api.post(`/payroll/payruns/${activePayrun.id}/send-payslips`);
       toast.success(res.data?.data?.message || 'Payslips successfully emailed to all employees in batch!');
+      await fetchActivePayrunDetail(activePayrun.id);
     } catch (err) {
-      toast.success(`Dispatched payslip notification emails to ${activePayrun.payrunItems?.length || 4} employees!`);
+      toast.error(err.response?.data?.error?.message || 'Failed to send payslip emails');
     }
   };
 
@@ -292,38 +298,45 @@ export default function PayrollPage() {
           <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.88rem' }}>
             {row.employee?.firstName} {row.employee?.lastName}
           </div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
-            {row.employee?.code || row.employee?.employeeCode || 'EMP-XXXX'}
-          </span>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+            <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+              {row.employee?.code || row.employee?.employeeCode || 'EMP-XXXX'}
+            </span>
+            {row.employee?.email && (
+              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                • {row.employee.email}
+              </span>
+            )}
+          </div>
         </div>
       )
     },
     {
       key: 'basic',
-      label: 'Basic Pay',
-      render: (val) => <span style={{ fontVariantNumeric: 'tabular-nums', color: '#334155' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      label: 'Contract Wage',
+      render: (val) => <span style={{ fontVariantNumeric: 'tabular-nums', color: '#334155', fontWeight: 600 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'grossPay',
       label: 'Gross Salary',
       sortable: true,
-      render: (val) => <span style={{ color: '#4f46e5', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#4f46e5', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'totalDeductions',
       label: 'Deductions (Tax + LOP)',
-      render: (val) => <span style={{ color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'netPay',
       label: 'Net Payout',
       sortable: true,
-      render: (val) => <span style={{ color: '#059669', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#059669', fontWeight: 800, fontVariantNumeric: 'tabular-nums', fontSize: '0.92rem' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'status',
       label: 'Status',
-      render: (val) => <span className="badge badge-success">✓ {val || 'CALCULATED'}</span>
+      render: (val) => <span className={`badge ${val === 'PAID' ? 'badge-success' : 'badge-purple'}`}>✓ {val || 'CALCULATED'}</span>
     }
   ];
 
@@ -334,23 +347,24 @@ export default function PayrollPage() {
       case 'COMPUTED': return 'badge-purple';
       case 'CALCULATED': return 'badge-purple';
       case 'VALIDATING': return 'badge-warning';
+      case 'REVIEW': return 'badge-warning';
       default: return 'badge-warning';
     }
   };
 
   const steps = [
-    { id: 'DRAFT', label: '1. Draft' },
-    { id: 'VALIDATING', label: '2. Validating' },
-    { id: 'COMPUTED', label: '3. Computed' },
+    { id: 'DRAFT', label: '1. Draft Scope' },
+    { id: 'CALCULATED', label: '2. Calculated' },
+    { id: 'REVIEW', label: '3. Validated / Review' },
     { id: 'APPROVED', label: '4. Approved' },
-    { id: 'PAID', label: '5. Paid' },
+    { id: 'PAID', label: '5. Paid & Dispatched' },
   ];
 
   const getStepIndex = (status) => {
     if (status === 'PAID') return 4;
-    if (status === 'APPROVED') return 3;
-    if (status === 'COMPUTED' || status === 'CALCULATED') return 2;
-    if (status === 'VALIDATING' || status === 'REVIEW') return 1;
+    if (status === 'APPROVED' || status === 'FINALIZED') return 3;
+    if (status === 'REVIEW' || status === 'VALIDATED') return 2;
+    if (status === 'CALCULATED' || status === 'COMPUTED' || status === 'CALCULATING') return 1;
     return 0;
   };
 
@@ -380,7 +394,7 @@ export default function PayrollPage() {
             <span className="badge badge-blue">Batch Process</span>
           </div>
           <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Execute salary structures, tax deductions, loss-of-pay penalties, and automated disbursements.
+            Execute salary structures, contract wages, tax deductions, loss-of-pay penalties, and automated disbursements.
           </p>
         </div>
 
@@ -414,7 +428,10 @@ export default function PayrollPage() {
             {payruns.map(pr => (
               <button
                 key={pr.id}
-                onClick={() => setActivePayrun(pr)}
+                onClick={() => {
+                  setActivePayrun(pr);
+                  fetchActivePayrunDetail(pr.id);
+                }}
                 style={{
                   padding: '6px 14px',
                   borderRadius: '8px',
@@ -460,6 +477,19 @@ export default function PayrollPage() {
 
             {/* Workflow Action Buttons (B6) */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Sync newly contracted staff */}
+              {activePayrun.status !== 'PAID' && (
+                <button
+                  onClick={handleSyncEmployees}
+                  disabled={isSyncing}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4338ca', borderColor: '#c7d2fe' }}
+                  title="Automatically enroll any newly contracted staff into this cycle"
+                >
+                  <Users size={14} /> {isSyncing ? 'Syncing...' : 'Sync New Staff'}
+                </button>
+              )}
+
               <button
                 onClick={handleCompute}
                 className="btn btn-secondary btn-sm"
@@ -491,9 +521,9 @@ export default function PayrollPage() {
                 onClick={handleMarkPaid}
                 className="btn btn-emerald btn-sm"
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                title="Mark payrun as Paid and finalized"
+                title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
               >
-                <IndianRupee size={14} /> Mark Paid
+                <IndianRupee size={14} /> Mark Paid & Dispatch
               </button>
 
               <button
@@ -548,21 +578,21 @@ export default function PayrollPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <StatCard
             title="Gross Salary Base"
-            value={`₹${(activePayrun.totalGross || 396800).toLocaleString('en-IN')}`}
+            value={`₹${(activePayrun.totalGross ?? 0).toLocaleString('en-IN')}`}
             color="#6366f1"
             icon={IndianRupee}
             badgeText="Pre-tax"
           />
           <StatCard
             title="Deductions & Penalties"
-            value={`₹${(activePayrun.totalDeductions || 39680).toLocaleString('en-IN')}`}
+            value={`₹${(activePayrun.totalDeductions ?? 0).toLocaleString('en-IN')}`}
             color="#f43f5e"
             icon={ShieldAlert}
             badgeText="Statutory"
           />
           <StatCard
             title="Net Disbursed Funds"
-            value={`₹${(activePayrun.totalNet || 357120).toLocaleString('en-IN')}`}
+            value={`₹${(activePayrun.totalNet ?? 0).toLocaleString('en-IN')}`}
             color="#10b981"
             icon={CheckCircle2}
             badgeText="Net Payout"
@@ -754,6 +784,16 @@ export default function PayrollPage() {
                 }}>
                   {allEmployees.map(emp => {
                     const isSelected = selectedEmpIds.includes(emp.id);
+                    const activeContract = emp.contracts?.find(c => {
+                      if (c.status !== 'ACTIVE') return false;
+                      const cStart = new Date(c.startDate);
+                      const pEnd = new Date(wizardForm.periodEnd);
+                      const pStart = new Date(wizardForm.periodStart);
+                      const cEnd = c.endDate ? new Date(c.endDate) : null;
+                      return cStart <= pEnd && (!cEnd || cEnd >= pStart);
+                    });
+                    const hasBank = !!(emp.bankAccountNumber && emp.bankIfsc);
+
                     return (
                       <div
                         key={emp.id}
@@ -782,17 +822,35 @@ export default function PayrollPage() {
                             </div>
                             <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                               {emp.employeeCode || emp.code} • {emp.department?.name || 'Staff'}
+                              {emp.email && ` • ${emp.email}`}
                             </div>
                           </div>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className="badge badge-success" style={{ fontSize: '0.68rem' }}>
-                            ✓ Active Contract
-                          </span>
-                          <span className="badge badge-blue" style={{ fontSize: '0.68rem' }}>
-                            Bank Verified
-                          </span>
+                          {activeContract ? (
+                            <span className="badge badge-success" style={{ fontSize: '0.68rem' }}>
+                              ✓ Active (₹{parseFloat(activeContract.basicWage || 0).toLocaleString('en-IN')})
+                            </span>
+                          ) : emp.contracts?.length > 0 ? (
+                            <span className="badge badge-warning" style={{ fontSize: '0.68rem' }}>
+                              ⚠️ Contract: {new Date(emp.contracts[0].startDate).toLocaleDateString()}
+                            </span>
+                          ) : (
+                            <span className="badge" style={{ fontSize: '0.68rem', backgroundColor: '#fee2e2', color: '#b91c1c' }}>
+                              No Contract
+                            </span>
+                          )}
+
+                          {hasBank ? (
+                            <span className="badge badge-blue" style={{ fontSize: '0.68rem' }}>
+                              Bank Verified
+                            </span>
+                          ) : (
+                            <span className="badge badge-warning" style={{ fontSize: '0.68rem' }}>
+                              No Bank
+                            </span>
+                          )}
                         </div>
                       </div>
                     );
