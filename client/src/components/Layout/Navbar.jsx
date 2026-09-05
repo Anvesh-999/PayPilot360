@@ -69,6 +69,9 @@ export default function Navbar() {
   const displayName = user?.employee ? `${user.employee.firstName} ${user.employee.lastName}` : (user?.name || user?.email?.split('@')[0] || 'Member');
   const userInitials = (user?.employee?.firstName?.[0] || user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase();
 
+  const isShiftEnded = Boolean(todayAttendance?.checkIn && todayAttendance?.checkOut);
+  const isCurrentlyWorking = Boolean(todayAttendance?.checkIn && !todayAttendance?.checkOut);
+
   return (
     <header style={{
       height: '64px',
@@ -119,16 +122,44 @@ export default function Navbar() {
             fontSize: '0.8rem',
             fontWeight: 600,
             cursor: clockLoading ? 'not-allowed' : 'pointer',
-            border: clockedIn ? '1px solid #fecdd3' : '1px solid #a7f3d0',
-            backgroundColor: clockedIn ? '#fff1f2' : '#ecfdf5',
-            color: clockedIn ? '#e11d48' : '#059669',
-            boxShadow: clockedIn ? '0 2px 8px rgba(244, 63, 94, 0.15)' : '0 2px 8px rgba(16, 185, 129, 0.15)',
+            border: isCurrentlyWorking
+              ? '1px solid #fecdd3'
+              : isShiftEnded
+              ? '1px solid #bae6fd'
+              : '1px solid #a7f3d0',
+            backgroundColor: isCurrentlyWorking
+              ? '#fff1f2'
+              : isShiftEnded
+              ? '#f0f9ff'
+              : '#ecfdf5',
+            color: isCurrentlyWorking
+              ? '#e11d48'
+              : isShiftEnded
+              ? '#0284c7'
+              : '#059669',
+            boxShadow: isCurrentlyWorking
+              ? '0 2px 8px rgba(244, 63, 94, 0.15)'
+              : '0 2px 8px rgba(16, 185, 129, 0.15)',
             transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
-          title={clockedIn ? 'Click to punch out' : 'Click to punch in'}
+          title={
+            isCurrentlyWorking
+              ? 'Click to clock out'
+              : isShiftEnded
+              ? 'Shift ended today. Click to resume / re-enter'
+              : 'Click to clock in'
+          }
         >
           <Clock size={15} />
-          <span>{clockLoading ? 'Syncing...' : clockedIn ? 'Clock Out' : 'Quick Clock In'}</span>
+          <span>
+            {clockLoading
+              ? 'Syncing...'
+              : isCurrentlyWorking
+              ? 'Clock Out'
+              : isShiftEnded
+              ? 'Shift Ended (Clock In)'
+              : 'Quick Clock In'}
+          </span>
         </button>
 
         {/* User Monogram Pill */}
