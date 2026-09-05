@@ -98,7 +98,22 @@ export default function PayslipListPage() {
       key: 'payslipNumber',
       label: 'Payslip Ref',
       sortable: true,
-      render: (val) => <span style={{ fontFamily: 'monospace', color: '#38bdf8', fontWeight: 600 }}>{val}</span>
+      render: (val) => (
+        <span style={{
+          fontFamily: 'monospace',
+          color: '#4338ca',
+          backgroundColor: '#eef2ff',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          fontWeight: 700,
+          border: '1px solid #c7d2fe',
+          fontSize: '0.82rem',
+          letterSpacing: '0.02em',
+          display: 'inline-block'
+        }}>
+          {val}
+        </span>
+      )
     },
     {
       key: 'employee',
@@ -106,8 +121,12 @@ export default function PayslipListPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: '#fff' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#94a3b8' }}>{row.employee?.code}</span>
+          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.92rem' }}>
+            {row.employee?.firstName} {row.employee?.lastName}
+          </div>
+          <span style={{ fontSize: '0.78rem', fontFamily: 'monospace', color: '#475569', fontWeight: 600 }}>
+            {row.employee?.code}
+          </span>
         </div>
       )
     },
@@ -115,24 +134,24 @@ export default function PayslipListPage() {
       key: 'payPeriod',
       label: 'Period',
       sortable: true,
-      render: (val) => val || 'March 2026'
+      render: (val) => <span style={{ color: '#334155', fontWeight: 500 }}>{val || 'March 2026'}</span>
     },
     {
       key: 'grossPay',
       label: 'Gross Pay',
       sortable: true,
-      render: (val) => <span style={{ color: '#14b8a6', fontWeight: 600 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#0284c7', fontWeight: 600 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'totalDeductions',
       label: 'Deductions',
-      render: (val) => <span style={{ color: '#ef4444' }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#e11d48', fontWeight: 600 }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'netPay',
       label: 'Net Pay',
       sortable: true,
-      render: (val) => <span style={{ color: '#10b981', fontWeight: 700 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
+      render: (val) => <span style={{ color: '#059669', fontWeight: 700 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'actions',
@@ -142,12 +161,16 @@ export default function PayslipListPage() {
           <button
             onClick={() => { setSelectedPayslip(row); setIsModalOpen(true); }}
             style={{
-              padding: '6px',
+              padding: '6px 10px',
               borderRadius: '6px',
-              background: 'rgba(20, 184, 166, 0.15)',
-              border: '1px solid rgba(20, 184, 166, 0.3)',
-              color: '#14b8a6',
-              cursor: 'pointer'
+              background: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              color: '#059669',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease'
             }}
             title="View Payslip"
           >
@@ -156,12 +179,16 @@ export default function PayslipListPage() {
           <button
             onClick={() => handleDownloadPDF(row)}
             style={{
-              padding: '6px',
+              padding: '6px 10px',
               borderRadius: '6px',
-              background: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              color: '#38bdf8',
-              cursor: 'pointer'
+              background: '#eef2ff',
+              border: '1px solid #c7d2fe',
+              color: '#4338ca',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease'
             }}
             title="Download PDF"
           >
