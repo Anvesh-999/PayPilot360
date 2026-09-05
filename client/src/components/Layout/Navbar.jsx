@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Clock, Bell, User, CheckCircle2, ChevronDown } from 'lucide-react';
+import { LogOut, Clock, Calendar } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -10,17 +10,16 @@ export default function Navbar() {
   const [clockLoading, setClockLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
 
-  // Check today's status on mount
   useEffect(() => {
     async function checkAttendance() {
       try {
         const { data } = await api.get('/attendance/my-today');
         if (data.data) {
           setTodayAttendance(data.data);
-          setClockedIn(data.data.checkIn && !data.data.checkOut);
+          setClockedIn(Boolean(data.data.checkIn && !data.data.checkOut));
         }
       } catch (err) {
-        // May not have checkIn today or not an employee
+        // Not clocked in or non-employee account
       }
     }
     if (user) {
@@ -49,44 +48,64 @@ export default function Navbar() {
     }
   };
 
-  const getRoleBadgeClass = (role) => {
+  const getRoleBadge = (role) => {
     switch (role) {
-      case 'SUPER_ADMIN': return 'badge-danger';
-      case 'HR_MANAGER': return 'badge-purple';
-      case 'PAYROLL_MANAGER': return 'badge-info';
-      case 'PAYROLL_USER': return 'badge-info';
-      case 'HR_STAFF': return 'badge-warning';
-      default: return 'badge-success';
+      case 'SUPER_ADMIN':
+        return { label: 'Super Admin', className: 'badge-purple' };
+      case 'HR_MANAGER':
+        return { label: 'HR Manager', className: 'badge-cyan' };
+      case 'PAYROLL_MANAGER':
+        return { label: 'Payroll Manager', className: 'badge-blue' };
+      case 'PAYROLL_USER':
+        return { label: 'Payroll Staff', className: 'badge-blue' };
+      case 'HR_STAFF':
+        return { label: 'HR Staff', className: 'badge-warning' };
+      default:
+        return { label: 'Employee', className: 'badge-success' };
     }
   };
 
+  const roleInfo = getRoleBadge(user?.role);
+  const displayName = user?.employee ? `${user.employee.firstName} ${user.employee.lastName}` : (user?.name || user?.email?.split('@')[0] || 'Member');
+  const userInitials = (user?.employee?.firstName?.[0] || user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase();
+
   return (
     <header style={{
-      height: '68px',
-      backgroundColor: 'var(--bg-secondary, #161b26)',
-      borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+      height: '64px',
+      backgroundColor: 'rgba(255, 255, 255, 0.92)',
+      backdropFilter: 'blur(16px)',
+      borderBottom: '1px solid #e2e8f0',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 28px',
+      padding: '0 24px',
       position: 'sticky',
       top: 0,
-      zIndex: 30
+      zIndex: 30,
+      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
     }}>
-      {/* Left Greeting */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Left Greeting & Date */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary, #ffffff)' }}>
-            Welcome back, {user?.employee?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User'}
-          </h2>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)' }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.94rem', fontWeight: 700, color: '#0f172a' }}>
+              Welcome back, {user?.employee?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Member'}
+            </span>
+            <span className={`badge ${roleInfo.className}`} style={{ fontSize: '0.7rem', padding: '1px 8px' }}>
+              {roleInfo.label}
+            </span>
+          </div>
+          <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <Calendar size={12} color="#94a3b8" />
+            <span>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Right Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         {/* Quick Punch Button */}
         <button
           onClick={handleTogglePunch}
@@ -95,77 +114,73 @@ export default function Navbar() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '7px 14px',
-            borderRadius: '20px',
-            fontSize: '0.82rem',
+            padding: '7px 15px',
+            borderRadius: '999px',
+            fontSize: '0.8rem',
             fontWeight: 600,
-            cursor: 'pointer',
-            border: clockedIn ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.4)',
-            backgroundColor: clockedIn ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-            color: clockedIn ? '#ef4444' : '#10b981',
-            transition: 'all 0.2s ease'
+            cursor: clockLoading ? 'not-allowed' : 'pointer',
+            border: clockedIn ? '1px solid #fecdd3' : '1px solid #a7f3d0',
+            backgroundColor: clockedIn ? '#fff1f2' : '#ecfdf5',
+            color: clockedIn ? '#e11d48' : '#059669',
+            boxShadow: clockedIn ? '0 2px 8px rgba(244, 63, 94, 0.15)' : '0 2px 8px rgba(16, 185, 129, 0.15)',
+            transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
           }}
           title={clockedIn ? 'Click to punch out' : 'Click to punch in'}
         >
-          <Clock size={16} />
-          {clockLoading ? 'Processing...' : clockedIn ? 'Clock Out' : 'Clock In'}
+          <Clock size={15} />
+          <span>{clockLoading ? 'Syncing...' : clockedIn ? 'Clock Out' : 'Quick Clock In'}</span>
         </button>
 
-        {/* User Card */}
+        {/* User Monogram Pill */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          padding: '6px 12px',
-          background: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: '12px',
-          border: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))'
+          gap: '10px',
+          padding: '4px 10px 4px 6px',
+          background: '#ffffff',
+          borderRadius: '999px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
         }}>
           <div style={{
-            width: '36px',
-            height: '36px',
+            width: '30px',
+            height: '30px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #14b8a6, #6366f1)',
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 700,
-            color: '#fff',
-            fontSize: '14px'
+            color: '#ffffff',
+            fontSize: '13px',
+            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)'
           }}>
-            {user?.employee?.firstName ? user.employee.firstName[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : 'U')}
+            {userInitials}
           </div>
-          <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary, #ffffff)' }}>
-              {user?.employee ? `${user.employee.firstName} ${user.employee.lastName}` : (user?.email?.split('@')[0] || 'User')}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <span className={`badge ${getRoleBadgeClass(user?.role)}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
-                {user?.role?.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {displayName}
+          </span>
         </div>
 
-        {/* Logout */}
+        {/* Sign Out Button */}
         <button
           onClick={logout}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-            color: '#ef4444',
+            width: '34px',
+            height: '34px',
+            borderRadius: '10px',
+            background: '#fff1f2',
+            border: '1px solid #fecdd3',
+            color: '#e11d48',
             cursor: 'pointer',
-            transition: 'all 0.15s ease'
+            transition: 'all 0.18s ease'
           }}
-          title="Sign out"
+          title="Sign out of PeoplePay360"
         >
-          <LogOut size={17} />
+          <LogOut size={16} />
         </button>
       </div>
     </header>

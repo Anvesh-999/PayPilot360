@@ -10,9 +10,6 @@ import {
   Receipt,
   Layers,
   UserCircle,
-  Building2,
-  Briefcase,
-  ShieldCheck,
   ChevronRight
 } from 'lucide-react';
 
@@ -25,120 +22,132 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const isHRManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
   const isPayroll = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
   const isPayrollManager = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']);
-  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const navSections = [
     {
       title: 'OVERVIEW',
       items: [
-        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: !isEmployee },
-        { path: '/portal', label: 'My Self-Service', icon: UserCircle, show: isEmployee },
+        { path: '/dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, color: '#4f46e5', bg: '#eef2ff', show: !isEmployee },
+        { path: '/portal', label: 'My Self-Service', icon: UserCircle, color: '#16a34a', bg: '#f0fdf4', show: isEmployee },
       ]
     },
     {
       title: isEmployee ? 'MY WORKSPACE' : 'CORE HR',
       items: [
-        { path: '/employees', label: 'Employees Directory', icon: Users, show: isHR },
-        { path: '/contracts', label: 'Contracts', icon: FileText, show: isHRManager || isPayrollManager },
-        { path: '/attendance', label: isEmployee ? 'My Attendance' : 'Attendance', icon: Clock, show: true },
-        { path: '/leave', label: isEmployee ? 'My Leaves & Requests' : 'Leave & Time Off', icon: CalendarCheck, show: true },
+        { path: '/employees', label: 'Employees Directory', icon: Users, color: '#7c3aed', bg: '#f5f3ff', show: isHR },
+        { path: '/contracts', label: 'Contracts & Terms', icon: FileText, color: '#0284c7', bg: '#f0f9ff', show: isHRManager || isPayrollManager },
+        { path: '/attendance', label: isEmployee ? 'My Attendance' : 'Attendance & Clock', icon: Clock, color: '#059669', bg: '#ecfdf5', show: true },
+        { path: '/leave', label: isEmployee ? 'My Leaves & Requests' : 'Leave & Time Off', icon: CalendarCheck, color: '#d97706', bg: '#fffbeb', show: true },
       ]
     },
     {
-      title: isEmployee ? 'MY COMPENSATION' : 'PAYROLL & COMPENSATION',
+      title: isEmployee ? 'MY COMPENSATION' : 'PAYROLL & FINANCE',
       items: [
-        { path: '/payroll', label: 'Payroll Runs', icon: Calculator, show: isPayroll },
-        { path: '/payslips', label: isEmployee ? 'My Payslips' : 'Payslips', icon: Receipt, show: true },
-        { path: '/salary-structures', label: 'Salary Rules & Structures', icon: Layers, show: isPayrollManager },
+        { path: '/payroll', label: 'Payroll Cycles', icon: Calculator, color: '#2563eb', bg: '#eff6ff', show: isPayroll },
+        { path: '/payslips', label: isEmployee ? 'My Payslips' : 'Employee Payslips', icon: Receipt, color: '#e11d48', bg: '#fff1f2', show: true },
+        { path: '/salary-structures', label: 'Salary Structures', icon: Layers, color: '#c026d3', bg: '#fdf4ff', show: isPayrollManager },
       ]
     },
     ...(isEmployee ? [] : [{
       title: 'SELF SERVICE',
       items: [
-        { path: '/portal', label: 'Employee Portal', icon: UserCircle, show: true },
+        { path: '/portal', label: 'My Portal', icon: UserCircle, color: '#16a34a', bg: '#f0fdf4', show: true },
       ]
     }])
   ];
 
   return (
-    <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} style={{
-      width: collapsed ? '80px' : '260px',
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      backgroundColor: 'var(--bg-secondary, #161b26)',
-      borderRight: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-      flexShrink: 0
-    }}>
-      {/* Brand / Logo */}
+    <aside
+      className={`sidebar ${collapsed ? 'collapsed' : ''}`}
+      style={{
+        width: collapsed ? '76px' : '264px',
+        transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        backgroundColor: '#ffffff',
+        borderRight: '1px solid #e2e8f0',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        flexShrink: 0,
+        boxShadow: '1px 0 10px rgba(0, 0, 0, 0.02)'
+      }}
+    >
+      {/* Brand Header */}
       <div style={{
-        padding: collapsed ? '20px 12px' : '20px 24px',
+        padding: collapsed ? '18px 12px' : '18px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'space-between',
-        borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))'
+        borderBottom: '1px solid #f1f5f9',
+        background: 'linear-gradient(180deg, #ffffff 0%, #fafafa 100%)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
+            width: '38px',
+            height: '38px',
             borderRadius: '10px',
-            background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0369a1 100%)',
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(20, 184, 166, 0.35)',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
             fontWeight: 800,
             color: '#ffffff',
-            fontSize: '18px'
+            fontSize: '17px',
+            letterSpacing: '-0.02em',
+            flexShrink: 0
           }}>
             P3
           </div>
           {!collapsed && (
             <div>
               <div style={{
-                fontSize: '1.15rem',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                background: 'linear-gradient(to right, #ffffff, #94a3b8)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+                fontSize: '1.08rem',
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                color: '#0f172a',
+                lineHeight: 1.2
               }}>
-                PeoplePay360
+                PeoplePay<span style={{ color: '#6366f1' }}>360</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#14b8a6', fontWeight: 600, letterSpacing: '0.05em' }}>
-                HR & PAYROLL SUITE
+              <div style={{
+                fontSize: '0.68rem',
+                color: '#64748b',
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                marginTop: '1px'
+              }}>
+                Payroll & HR Suite
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Navigation list */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 12px' }} className="custom-scrollbar">
+      {/* Navigation List */}
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 10px' }}>
         {navSections.map((section, sIdx) => {
           const visibleItems = section.items.filter(item => item.show);
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={sIdx} style={{ marginBottom: '20px' }}>
+            <div key={sIdx} style={{ marginBottom: '18px' }}>
               {!collapsed && (
                 <div style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.66rem',
                   fontWeight: 700,
-                  color: 'var(--text-muted, #64748b)',
-                  padding: '4px 12px 8px 12px',
+                  color: '#94a3b8',
+                  padding: '4px 12px 6px 12px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase'
                 }}>
                   {section.title}
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -150,20 +159,47 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
-                        padding: collapsed ? '12px' : '10px 14px',
+                        padding: collapsed ? '11px' : '9px 12px',
                         justifyContent: collapsed ? 'center' : 'flex-start',
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         textDecoration: 'none',
-                        color: isActive ? '#14b8a6' : 'var(--text-secondary, #94a3b8)',
-                        backgroundColor: isActive ? 'rgba(20, 184, 166, 0.12)' : 'transparent',
+                        color: isActive ? item.color : '#475569',
+                        backgroundColor: isActive ? item.bg : 'transparent',
                         fontWeight: isActive ? 600 : 500,
-                        fontSize: '0.9rem',
-                        transition: 'all 0.15s ease',
-                        borderLeft: isActive ? '3px solid #14b8a6' : '3px solid transparent'
+                        fontSize: '0.875rem',
+                        transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                        border: isActive ? `1px solid ${item.color}35` : '1px solid transparent',
+                        boxShadow: isActive ? `0 2px 8px ${item.color}15` : 'none'
                       })}
                     >
-                      <Icon size={20} style={{ flexShrink: 0 }} />
-                      {!collapsed && <span>{item.label}</span>}
+                      {({ isActive }) => (
+                        <>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '24px',
+                            height: '24px',
+                            color: item.color
+                          }}>
+                            <Icon size={18} />
+                          </div>
+                          {!collapsed && (
+                            <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {item.label}
+                            </span>
+                          )}
+                          {isActive && !collapsed && (
+                            <div style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: item.color,
+                              boxShadow: `0 0 6px ${item.color}80`
+                            }} />
+                          )}
+                        </>
+                      )}
                     </NavLink>
                   );
                 })}
@@ -173,42 +209,41 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         })}
       </nav>
 
-      {/* Collapse toggle / footer */}
+      {/* Collapse Toggle / System Status Footer */}
       <div style={{
-        padding: '14px',
-        borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
+        padding: '12px 16px',
+        borderTop: '1px solid #f1f5f9',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between'
+        justifyContent: collapsed ? 'center' : 'space-between',
+        backgroundColor: '#fafafa'
       }}>
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#10b981',
-              boxShadow: '0 0 8px #10b981'
-            }} />
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>System Online</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="status-dot active" />
+            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
+              Cloud Active
+            </span>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
           style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#94a3b8',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            color: '#64748b',
             cursor: 'pointer',
-            padding: '6px',
+            padding: '5px',
             borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            transition: 'all 0.15s ease'
           }}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <ChevronRight size={18} style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }} />
+          <ChevronRight size={15} style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }} />
         </button>
       </div>
     </aside>

@@ -8,27 +8,29 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-primary, #0f1219)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
       <Toaster
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1c2233',
-            color: '#f8fafc',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: '#ffffff',
+            color: '#0f172a',
+            border: '1px solid #e2e8f0',
             fontSize: '0.875rem',
-            borderRadius: '8px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px -4px rgba(15, 23, 42, 0.1)',
+            fontWeight: 500,
           },
           success: {
             iconTheme: {
-              primary: '#14b8a6',
-              secondary: '#1c2233',
+              primary: '#10b981',
+              secondary: '#ecfdf5',
             },
           },
           error: {
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#1c2233',
+              primary: '#f43f5e',
+              secondary: '#fff1f2',
             },
           },
         }}
@@ -37,7 +39,7 @@ export default function AppLayout() {
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, backgroundColor: '#f8fafc' }}>
         <Navbar />
         <main style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
           <Outlet />

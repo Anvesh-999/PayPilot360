@@ -12,20 +12,20 @@ export default function ProtectedRoute({ allowedRoles }) {
         minHeight: '100vh',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--bg-primary, #0f1219)',
-        color: 'var(--text-muted, #94a3b8)'
+        background: 'var(--bg-app, #f8fafc)',
+        color: 'var(--text-secondary, #475569)'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div className="spinner" style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid rgba(20, 184, 166, 0.2)',
-            borderTopColor: '#14b8a6',
+            width: '42px',
+            height: '42px',
+            border: '3px solid rgba(99, 102, 241, 0.2)',
+            borderTopColor: '#6366f1',
             borderRadius: '50%',
             animation: 'spin 0.8s linear infinite',
             margin: '0 auto 16px auto'
           }} />
-          <p>Loading PeoplePay360...</p>
+          <p style={{ fontWeight: 600, color: '#64748b' }}>Loading PeoplePay360...</p>
         </div>
       </div>
     );

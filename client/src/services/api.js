@@ -23,6 +23,15 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Do not attempt token refresh on auth endpoints (login, refresh)
+    if (
+      !originalRequest ||
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/refresh')
+    ) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -42,7 +51,9 @@ api.interceptors.response.use(
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }

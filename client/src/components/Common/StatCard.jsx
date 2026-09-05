@@ -1,69 +1,118 @@
-export default function StatCard({ title, value, icon: Icon, change, changeType = 'positive', description, color = '#14b8a6' }) {
+export default function StatCard({
+  title,
+  value,
+  icon: Icon,
+  change,
+  changeType = 'positive',
+  description,
+  color = '#6366f1',
+  bgColor = '#eef2ff',
+  badgeText
+}) {
   const isPositive = changeType === 'positive';
-  
+
   return (
-    <div className="card" style={{
-      padding: '24px',
-      position: 'relative',
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      borderTop: `3px solid ${color}`
-    }}>
+    <div
+      className="card card-interactive"
+      style={{
+        padding: '22px 24px',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        backgroundColor: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '16px',
+        boxShadow: '0 4px 14px rgba(15, 23, 42, 0.04)',
+        transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+      }}
+    >
+      {/* Top Accent Gradient Line */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '3px',
+        background: `linear-gradient(90deg, ${color} 0%, transparent 80%)`
+      }} />
+
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
         <div>
-          <span style={{
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: 'var(--text-muted, #94a3b8)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em'
-          }}>
-            {title}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              color: '#64748b',
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em'
+            }}>
+              {title}
+            </span>
+            {badgeText && (
+              <span className="badge badge-gray" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                {badgeText}
+              </span>
+            )}
+          </div>
           <div style={{
-            fontSize: '1.85rem',
-            fontWeight: 700,
-            color: 'var(--text-primary, #ffffff)',
-            marginTop: '6px',
-            lineHeight: 1.2
+            fontSize: '1.95rem',
+            fontWeight: 800,
+            color: '#0f172a',
+            marginTop: '8px',
+            lineHeight: 1.15,
+            letterSpacing: '-0.03em',
+            fontVariantNumeric: 'tabular-nums'
           }}>
             {value}
           </div>
         </div>
+
         {Icon && (
           <div style={{
             width: '44px',
             height: '44px',
             borderRadius: '12px',
-            background: `${color}18`,
+            background: bgColor || `${color}18`,
+            border: `1px solid ${color}30`,
             color: color,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            flexShrink: 0
+            flexShrink: 0,
+            boxShadow: `0 4px 12px ${color}15`,
+            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
-            <Icon size={22} />
+            <Icon size={21} />
           </div>
         )}
       </div>
 
       {(change || description) && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '0.78rem',
+          paddingTop: '12px',
+          borderTop: '1px solid #f1f5f9'
+        }}>
           {change && (
             <span style={{
-              fontWeight: 600,
-              color: isPositive ? '#10b981' : '#ef4444',
-              backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-              padding: '2px 6px',
-              borderRadius: '4px'
+              fontWeight: 700,
+              color: isPositive ? '#065f46' : '#9f1239',
+              backgroundColor: isPositive ? '#ecfdf5' : '#fff1f2',
+              border: isPositive ? '1px solid #a7f3d0' : '1px solid #fecdd3',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              fontSize: '0.72rem'
             }}>
               {isPositive ? '↑' : '↓'} {change}
             </span>
           )}
           {description && (
-            <span style={{ color: 'var(--text-muted, #94a3b8)' }}>
+            <span style={{ color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {description}
             </span>
           )}
