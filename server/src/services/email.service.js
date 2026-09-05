@@ -18,9 +18,14 @@ class EmailService {
         if (host.includes('gmail') || user.endsWith('@gmail.com')) {
           this.transporter = nodemailer.createTransport({
             service: 'gmail',
+            pool: true,
+            maxConnections: 3,
+            maxMessages: 100,
+            rateDelta: 1000,
+            rateLimit: 3,
             auth: { user, pass },
           });
-          console.log(`✉️ EmailService: Configured Gmail SMTP service for [${user}]`);
+          console.log(`✉️ EmailService: Configured pooled Gmail SMTP service for [${user}]`);
         } else {
           this.transporter = nodemailer.createTransport({
             host,

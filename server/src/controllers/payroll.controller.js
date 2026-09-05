@@ -84,8 +84,15 @@ const syncEmployees = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const resetToDraft = async (req, res, next) => {
+  try {
+    const payrun = await payrollService.resetToDraft(req.params.id);
+    res.json({ success: true, data: payrun });
+  } catch (error) { next(error); }
+};
+
 module.exports = {
   createPayrun, getEligibleEmployees, selectEmployees, calculate,
   getPayrunDetail, listPayruns, validatePayrun, approve, finalize, markPaid,
-  sendPayslips, syncEmployees,
+  sendPayslips, syncEmployees, resetToDraft,
 };

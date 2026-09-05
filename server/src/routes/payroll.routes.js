@@ -23,5 +23,6 @@ router.post('/payruns/:id/finalize', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANA
 router.post('/payruns/:id/mark-paid', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('Payrun', 'MARK_PAID'), ctrl.markPaid);
 router.post('/payruns/:id/send-payslips', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('Payrun', 'SEND_PAYSLIPS'), ctrl.sendPayslips);
 router.post('/payruns/:id/sync-employees', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('Payrun', 'SYNC_EMPLOYEES'), ctrl.syncEmployees);
+router.post('/payruns/:id/reset', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('Payrun', 'RESET'), ctrl.resetToDraft);
 
 module.exports = router;

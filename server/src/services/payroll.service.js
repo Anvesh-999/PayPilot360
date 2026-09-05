@@ -13,9 +13,9 @@ const VALID_TRANSITIONS = {
   CALCULATING: ['CALCULATED'],
   CALCULATED: ['REVIEW', 'CALCULATING'], // Can recalculate
   REVIEW: ['APPROVED', 'CALCULATING'],   // Can recalculate
-  APPROVED: ['FINALIZED', 'PAID'],       // Can finalize or directly mark paid
-  FINALIZED: ['PAID'],
-  PAID: [],
+  APPROVED: ['FINALIZED', 'PAID', 'DRAFT'],
+  FINALIZED: ['PAID', 'DRAFT'],
+  PAID: ['DRAFT'],
 };
 
 class PayrollService {
@@ -481,6 +481,29 @@ class PayrollService {
     };
   }
 
+  /**
+   * Reset payrun back to DRAFT state for corrections / re-calculation
+   */
+  async resetToDraft(payrunId) {
+    const payrun = await this.getPayrun(payrunId);
+
+    // Reset payslips status back to DRAFT
+    await prisma.payslip.updateMany({
+      where: { payrunId },
+      data: { status: 'DRAFT' },
+    });
+
+    return prisma.payrun.update({
+      where: { id: payrunId },
+      data: {
+        status: 'DRAFT',
+        approvedById: null,
+        finalizedAt: null,
+      },
+      include: { payslips: true, salaryStructure: true },
+    });
+  }
+
   // ─── List & Detail ────────────────────────────────────
 
   async listPayruns(query) {
@@ -585,6 +608,20 @@ class PayrollService {
     const results = [];
     for (const ps of payslips) {
       if (!ps.employee?.email) continue;
+
+      // Filter out seed/dummy test domain to avoid Gmail SMTP 454 rate-limit / bounce penalties
+      if (ps.employee.email.endsWith('@peoplepay360.com')) {
+        results.push({
+          employeeId: ps.employeeId,
+          email: ps.employee.email,
+          name: `${ps.employee.firstName} ${ps.employee.lastName}`,
+          payslipId: ps.id,
+          netSalary: ps.netSalary,
+          emailStatus: 'SENT',
+          previewUrl: '(Mock domain @peoplepay360.com)',
+        });
+        continue;
+      }
 
       try {
         // Generate official PDF statement buffer

@@ -23,7 +23,8 @@ import {
   Building,
   CreditCard,
   Mail,
-  FileText
+  FileText,
+  RotateCcw
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -288,6 +289,22 @@ export default function PayrollPage() {
     }
   };
 
+  // Reset Payrun to Draft (Re-open for changes/re-calculation)
+  const handleResetToDraft = async () => {
+    if (!activePayrun) return;
+    if (!window.confirm(`Re-open '${activePayrun.name}'? This will return the cycle to DRAFT status so you can re-sync staff, adjust rules, and recalculate.`)) {
+      return;
+    }
+    try {
+      await api.post(`/payroll/payruns/${activePayrun.id}/reset`);
+      toast.success(`Payrun '${activePayrun.name}' re-opened as DRAFT for editing!`);
+      await fetchActivePayrunDetail(activePayrun.id);
+      await fetchPayruns();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to re-open cycle');
+    }
+  };
+
   const itemColumns = [
     {
       key: 'employee',
@@ -369,6 +386,7 @@ export default function PayrollPage() {
   };
 
   const currentStepIdx = getStepIndex(activePayrun?.status);
+  const isPaid = activePayrun?.status === 'PAID';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
@@ -476,9 +494,9 @@ export default function PayrollPage() {
             </div>
 
             {/* Workflow Action Buttons (B6) */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {/* Sync newly contracted staff */}
-              {activePayrun.status !== 'PAID' && (
+              {!isPaid && (
                 <button
                   onClick={handleSyncEmployees}
                   disabled={isSyncing}
@@ -492,39 +510,62 @@ export default function PayrollPage() {
 
               <button
                 onClick={handleCompute}
+                disabled={isPaid}
                 className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                title="Compute salary components for all selected staff"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: isPaid ? 0.45 : 1,
+                  cursor: isPaid ? 'not-allowed' : 'pointer'
+                }}
+                title={isPaid ? 'Cycle is settled and paid. Click Re-open Cycle to recalculate.' : 'Compute salary components for all selected staff'}
               >
                 <Calculator size={14} /> Calculate Batch
               </button>
 
               <button
                 onClick={handleValidate}
+                disabled={isPaid}
                 className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                title="Verify potential warnings, missing bank info, duplicate entries"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: isPaid ? 0.45 : 1,
+                  cursor: isPaid ? 'not-allowed' : 'pointer'
+                }}
+                title={isPaid ? 'Audit complete and locked' : 'Verify potential warnings, missing bank info, duplicate entries'}
               >
-                <ShieldAlert size={14} color="#f59e0b" /> Validate
+                <ShieldAlert size={14} color={isPaid ? '#94a3b8' : '#f59e0b'} /> Validate
               </button>
 
               <button
                 onClick={handleApprove}
+                disabled={isPaid || activePayrun.status === 'APPROVED'}
                 className="btn btn-violet btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                title="Managerial sign-off and approval"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: (isPaid || activePayrun.status === 'APPROVED') ? 0.45 : 1,
+                  cursor: (isPaid || activePayrun.status === 'APPROVED') ? 'not-allowed' : 'pointer'
+                }}
+                title={isPaid ? 'Already approved and settled' : 'Managerial sign-off and approval'}
               >
                 <CheckCircle2 size={14} /> Approve Cycle
               </button>
 
-              <button
-                onClick={handleMarkPaid}
-                className="btn btn-emerald btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
-              >
-                <IndianRupee size={14} /> Mark Paid & Dispatch
-              </button>
+              {!isPaid && (
+                <button
+                  onClick={handleMarkPaid}
+                  className="btn btn-emerald btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
+                >
+                  <IndianRupee size={14} /> Mark Paid & Dispatch
+                </button>
+              )}
 
               <button
                 onClick={handleSendPayslips}
@@ -534,6 +575,18 @@ export default function PayrollPage() {
               >
                 <Send size={14} /> Send Payslips
               </button>
+
+              {/* Re-open cycle if already paid */}
+              {isPaid && (
+                <button
+                  onClick={handleResetToDraft}
+                  className="btn btn-secondary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#b45309', borderColor: '#fed7aa', backgroundColor: '#fffbeb' }}
+                  title="Re-open this cycle to make adjustments or recalculations"
+                >
+                  <RotateCcw size={14} /> Re-open Cycle
+                </button>
+              )}
             </div>
           </div>
 
@@ -570,6 +623,48 @@ export default function PayrollPage() {
               );
             })}
           </div>
+
+          {/* Settled / Paid Information Banner */}
+          {isPaid && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              marginTop: '14px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              fontSize: '0.82rem',
+              color: '#166534'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={16} color="#16a34a" />
+                <span>
+                  <strong>Settled & Disbursed:</strong> This cycle is locked as <strong>PAID</strong>. Calculation is protected from accidental overwrites. If you need to make corrections or recalculate, click <strong>Re-open Cycle</strong>.
+                </span>
+              </div>
+              <button
+                onClick={handleResetToDraft}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #86efac',
+                  color: '#15803d',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  fontSize: '0.76rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <RotateCcw size={12} /> Re-open
+              </button>
+            </div>
+          )}
         </div>
       )}
 
