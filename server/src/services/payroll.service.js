@@ -507,7 +507,9 @@ class PayrollService {
   // ─── List & Detail ────────────────────────────────────
 
   async listPayruns(query) {
-    const { status, page = 1, pageSize = 20 } = query;
+    const { status } = query;
+    const page = Math.max(1, parseInt(query.page, 10) || 1);
+    const pageSize = Math.max(1, parseInt(query.pageSize, 10) || 20);
     const where = {};
     if (status) where.status = status;
 

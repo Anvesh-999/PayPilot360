@@ -33,8 +33,8 @@ export default function App() {
               <Route path="/payslips" element={<PayslipListPage />} />
               <Route path="/portal" element={<EmployeePortalPage />} />
 
-              {/* HR Scoped Routes */}
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']} />}>
+              {/* Employee Directory Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']} />}>
                 <Route path="/employees" element={<EmployeeListPage />} />
               </Route>
 
@@ -43,7 +43,7 @@ export default function App() {
                 <Route path="/contracts" element={<ContractListPage />} />
               </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'PAYROLL_MANAGER']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'PAYROLL_MANAGER', 'HR_MANAGER']} />}>
                 <Route path="/salary-structures" element={<SalaryStructurePage />} />
               </Route>
 

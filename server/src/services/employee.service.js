@@ -132,7 +132,16 @@ class EmployeeService {
         include: {
           department: true,
           jobPosition: true,
-          manager: { select: { id: true, firstName: true, lastName: true } },
+          manager: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
+          workingSchedule: { select: { id: true, name: true, type: true, totalWeeklyHours: true } },
+          _count: {
+            select: {
+              contracts: true,
+              attendance: true,
+              leaveRequests: true,
+              payslips: true,
+            },
+          },
         },
         orderBy: { [sort]: order },
         skip,
@@ -156,6 +165,14 @@ class EmployeeService {
         manager: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
         workingSchedule: { include: { scheduleDays: true } },
         user: { select: { id: true, email: true, role: { select: { name: true } } } },
+        _count: {
+          select: {
+            contracts: true,
+            attendance: true,
+            leaveRequests: true,
+            payslips: true,
+          },
+        },
       },
     });
 
@@ -203,8 +220,16 @@ class EmployeeService {
       include: {
         department: true,
         jobPosition: true,
-        manager: { select: { id: true, firstName: true, lastName: true } },
+        manager: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
         workingSchedule: true,
+        _count: {
+          select: {
+            contracts: true,
+            attendance: true,
+            leaveRequests: true,
+            payslips: true,
+          },
+        },
       },
     });
   }
