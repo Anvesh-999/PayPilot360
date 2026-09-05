@@ -77,7 +77,7 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0, color: 'var(--text-primary, #ffffff)' }}>
-            Welcome back, {user?.name?.split(' ')[0] || user?.email || 'User'}
+            Welcome back, {user?.employee?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User'}
           </h2>
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted, #94a3b8)' }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -133,11 +133,11 @@ export default function Navbar() {
             color: '#fff',
             fontSize: '14px'
           }}>
-            {user?.name ? user.name[0].toUpperCase() : 'U'}
+            {user?.employee?.firstName ? user.employee.firstName[0].toUpperCase() : (user?.email ? user.email[0].toUpperCase() : 'U')}
           </div>
           <div>
             <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary, #ffffff)' }}>
-              {user?.name || user?.email}
+              {user?.employee ? `${user.employee.firstName} ${user.employee.lastName}` : (user?.email?.split('@')[0] || 'User')}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
               <span className={`badge ${getRoleBadgeClass(user?.role)}`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>

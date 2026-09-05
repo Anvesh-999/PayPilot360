@@ -17,24 +17,54 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import api from '../../services/api';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 
 export default function DashboardPage() {
   const { user, hasRole } = useAuth();
+
+  if (user?.role === 'EMPLOYEE') {
+    return <Navigate to="/portal" replace />;
+  }
+
   const [stats, setStats] = useState({
-    activeEmployees: 42,
-    totalMonthlyPayroll: 185400,
-    pendingLeaves: 3,
-    todayAttendanceRate: 94.2,
+    activeEmployees: 10,
+    totalMonthlyPayroll: 396800,
+    pendingLeaves: 2,
+    todayAttendanceRate: 96.5,
   });
+  const [departmentData, setDepartmentData] = useState([
+    { name: 'Engineering', count: 6, color: '#14b8a6' },
+    { name: 'Sales', count: 2, color: '#38bdf8' },
+    { name: 'HR & Admin', count: 2, color: '#818cf8' },
+  ]);
+  const [payrollTrendData, setPayrollTrendData] = useState([
+    { month: 'Apr', gross: 380000, net: 342000, deductions: 38000 },
+    { month: 'May', gross: 385000, net: 346500, deductions: 38500 },
+    { month: 'Jun', gross: 390000, net: 351000, deductions: 39000 },
+    { month: 'Jul', gross: 396800, net: 357120, deductions: 39680 },
+  ]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
         const { data } = await api.get('/dashboard/summary');
-        if (data.data) {
-          setStats(data.data);
+        if (data.data?.kpis) {
+          const k = data.data.kpis;
+          setStats({
+            activeEmployees: k.activeEmployees || 10,
+            totalMonthlyPayroll: k.averageSalary ? Math.round(k.averageSalary * (k.activeEmployees || 10)) : 396800,
+            pendingLeaves: k.pendingLeaveRequests ?? 2,
+            todayAttendanceRate: k.attendanceRate || 96.5,
+          });
+        }
+        if (data.data?.charts?.departmentDistribution?.length > 0) {
+          const palette = ['#14b8a6', '#38bdf8', '#818cf8', '#f59e0b', '#ec4899'];
+          setDepartmentData(data.data.charts.departmentDistribution.map((d, i) => ({
+            name: d.name,
+            count: d.value,
+            color: palette[i % palette.length]
+          })));
         }
       } catch (err) {
         // Fallback default sample metrics shown for presentation
@@ -44,22 +74,6 @@ export default function DashboardPage() {
     }
     fetchStats();
   }, []);
-
-  const payrollTrendData = [
-    { month: 'Nov', gross: 172000, net: 146200, deductions: 25800 },
-    { month: 'Dec', gross: 178500, net: 151700, deductions: 26800 },
-    { month: 'Jan', gross: 181000, net: 153850, deductions: 27150 },
-    { month: 'Feb', gross: 182400, net: 155040, deductions: 27360 },
-    { month: 'Mar', gross: 185400, net: 157590, deductions: 27810 },
-  ];
-
-  const departmentData = [
-    { name: 'Engineering', count: 18, color: '#14b8a6' },
-    { name: 'Product & Design', count: 8, color: '#38bdf8' },
-    { name: 'Sales & Marketing', count: 9, color: '#818cf8' },
-    { name: 'Operations & HR', count: 4, color: '#f59e0b' },
-    { name: 'Finance', count: 3, color: '#ec4899' },
-  ];
 
   const recentPayruns = [
     { id: 'PR-2026-03', name: 'March 2026 Regular Cycle', period: 'Mar 1 - Mar 31, 2026', total: '$185,400.00', status: 'DRAFT', employees: 42 },

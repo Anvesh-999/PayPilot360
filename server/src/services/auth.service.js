@@ -15,7 +15,12 @@ class AuthService {
       where: { email },
       include: {
         role: true,
-        employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } },
+        employee: {
+          include: {
+            department: true,
+            jobPosition: true,
+          },
+        },
       },
     });
 
@@ -49,7 +54,13 @@ class AuthService {
           ? {
               id: user.employee.id,
               code: user.employee.employeeCode,
+              employeeCode: user.employee.employeeCode,
+              firstName: user.employee.firstName,
+              lastName: user.employee.lastName,
               name: `${user.employee.firstName} ${user.employee.lastName}`,
+              employmentStatus: user.employee.employmentStatus,
+              department: user.employee.department ? { name: user.employee.department.name } : null,
+              jobPosition: user.employee.jobPosition ? { title: user.employee.jobPosition.title } : null,
             }
           : null,
       },
@@ -68,12 +79,17 @@ class AuthService {
         where: { id: decoded.userId },
         include: {
           role: true,
-          employee: { select: { id: true, employeeCode: true, firstName: true, lastName: true } },
+          employee: {
+            include: {
+              department: true,
+              jobPosition: true,
+            },
+          },
         },
       });
 
       if (!user || user.refreshToken !== hashedRefresh) {
-        throw new AppError('Invalid refresh token', 401, 'INVALID_REFRESH_TOKEN');
+        throw new AppError('Invalid or expired refresh token', 401, 'INVALID_REFRESH_TOKEN');
       }
 
       const newAccessToken = this.generateAccessToken(user);
@@ -97,7 +113,13 @@ class AuthService {
             ? {
                 id: user.employee.id,
                 code: user.employee.employeeCode,
+                employeeCode: user.employee.employeeCode,
+                firstName: user.employee.firstName,
+                lastName: user.employee.lastName,
                 name: `${user.employee.firstName} ${user.employee.lastName}`,
+                employmentStatus: user.employee.employmentStatus,
+                department: user.employee.department ? { name: user.employee.department.name } : null,
+                jobPosition: user.employee.jobPosition ? { title: user.employee.jobPosition.title } : null,
               }
             : null,
         },

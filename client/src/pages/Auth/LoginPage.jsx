@@ -23,9 +23,10 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await login(email, password);
+      const userData = await login(email, password);
       toast.success('Signed in successfully');
-      navigate(from, { replace: true });
+      const target = userData?.role === 'EMPLOYEE' ? '/portal' : (location.state?.from?.pathname || '/dashboard');
+      navigate(target, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Invalid email or password');
     } finally {

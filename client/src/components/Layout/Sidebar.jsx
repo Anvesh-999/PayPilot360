@@ -19,6 +19,7 @@ import {
 export default function Sidebar({ collapsed, setCollapsed }) {
   const { user, hasRole } = useAuth();
   const role = user?.role;
+  const isEmployee = role === 'EMPLOYEE';
 
   const isHR = hasRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']);
   const isHRManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
@@ -30,32 +31,33 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     {
       title: 'OVERVIEW',
       items: [
-        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
+        { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: !isEmployee },
+        { path: '/portal', label: 'My Self-Service', icon: UserCircle, show: isEmployee },
       ]
     },
     {
-      title: 'CORE HR',
+      title: isEmployee ? 'MY WORKSPACE' : 'CORE HR',
       items: [
-        { path: '/employees', label: 'Employees', icon: Users, show: isHR },
+        { path: '/employees', label: 'Employees Directory', icon: Users, show: isHR },
         { path: '/contracts', label: 'Contracts', icon: FileText, show: isHRManager || isPayrollManager },
-        { path: '/attendance', label: 'Attendance', icon: Clock, show: isHR },
-        { path: '/leave', label: 'Leave & Time Off', icon: CalendarCheck, show: true },
+        { path: '/attendance', label: isEmployee ? 'My Attendance' : 'Attendance', icon: Clock, show: true },
+        { path: '/leave', label: isEmployee ? 'My Leaves & Requests' : 'Leave & Time Off', icon: CalendarCheck, show: true },
       ]
     },
     {
-      title: 'PAYROLL & COMPENSATION',
+      title: isEmployee ? 'MY COMPENSATION' : 'PAYROLL & COMPENSATION',
       items: [
         { path: '/payroll', label: 'Payroll Runs', icon: Calculator, show: isPayroll },
-        { path: '/payslips', label: 'Payslips', icon: Receipt, show: isPayroll || isHR },
+        { path: '/payslips', label: isEmployee ? 'My Payslips' : 'Payslips', icon: Receipt, show: true },
         { path: '/salary-structures', label: 'Salary Rules & Structures', icon: Layers, show: isPayrollManager },
       ]
     },
-    {
+    ...(isEmployee ? [] : [{
       title: 'SELF SERVICE',
       items: [
         { path: '/portal', label: 'Employee Portal', icon: UserCircle, show: true },
       ]
-    }
+    }])
   ];
 
   return (
