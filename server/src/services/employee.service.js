@@ -30,16 +30,16 @@ class EmployeeService {
       throw new AppError('Email already in use', 409, 'DUPLICATE_EMAIL');
     }
 
+    // Create user account with default password (hash before transaction)
+    const defaultPassword = 'Password@123';
+    const passwordHash = await authService.hashPassword(defaultPassword);
+
     return prisma.$transaction(async (tx) => {
       // Find EMPLOYEE role
       const employeeRole = await tx.role.findUnique({ where: { name: 'EMPLOYEE' } });
       if (!employeeRole) {
         throw new AppError('EMPLOYEE role not found. Run seed first.', 500, 'ROLE_NOT_FOUND');
       }
-
-      // Create user account with default password
-      const defaultPassword = 'Password@123';
-      const passwordHash = await authService.hashPassword(defaultPassword);
 
       const user = await tx.user.create({
         data: {
@@ -86,7 +86,7 @@ class EmployeeService {
       });
 
       return employee;
-    });
+    }, { timeout: 15000 });
   }
 
   /**

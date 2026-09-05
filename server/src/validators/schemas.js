@@ -1,24 +1,54 @@
 const { z } = require('zod');
 
+const emptyToNull = (val) => (val === '' || val === undefined ? null : val);
+
 const contractBaseSchema = z.object({
-  employeeId: z.string().uuid(),
+  employeeId: z.string().uuid('Please select a valid employee'),
   startDate: z.coerce.date(),
-  endDate: z.coerce.date().optional().nullable(),
-  basicWage: z.number().positive('Basic wage must be positive'),
+  endDate: z.preprocess(emptyToNull, z.coerce.date().nullable().optional()),
+  basicWage: z.preprocess(
+    (val) => {
+      if (val === '' || val === null || val === undefined) return undefined;
+      const num = Number(val);
+      return isNaN(num) ? undefined : num;
+    },
+    z.number().positive('Basic wage must be positive')
+  ),
+  baseSalary: z.any().optional(),
   wageType: z.enum(['MONTHLY', 'HOURLY', 'DAILY']).default('MONTHLY'),
-  departmentId: z.string().uuid().optional().nullable(),
-  jobPositionId: z.string().uuid().optional().nullable(),
-  workingScheduleId: z.string().uuid().optional().nullable(),
-  salaryStructureId: z.string().uuid().optional().nullable(),
+  departmentId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  jobPositionId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  workingScheduleId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  salaryStructureId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
   status: z.enum(['DRAFT', 'ACTIVE', 'EXPIRED', 'CANCELLED']).default('DRAFT'),
 });
 
-const contractCreateSchema = contractBaseSchema.refine(
-  (data) => !data.endDate || data.endDate > data.startDate,
-  { message: 'End date must be after start date', path: ['endDate'] }
+const contractCreateSchema = z.preprocess(
+  (obj) => {
+    if (obj && typeof obj === 'object') {
+      if (obj.basicWage === undefined && obj.baseSalary !== undefined) {
+        return { ...obj, basicWage: obj.baseSalary };
+      }
+    }
+    return obj;
+  },
+  contractBaseSchema.refine(
+    (data) => !data.endDate || data.endDate > data.startDate,
+    { message: 'End date must be after start date', path: ['endDate'] }
+  )
 );
 
-const contractUpdateSchema = contractBaseSchema.partial().omit({ employeeId: true });
+const contractUpdateSchema = z.preprocess(
+  (obj) => {
+    if (obj && typeof obj === 'object') {
+      if (obj.basicWage === undefined && obj.baseSalary !== undefined) {
+        return { ...obj, basicWage: obj.baseSalary };
+      }
+    }
+    return obj;
+  },
+  contractBaseSchema.partial().omit({ employeeId: true })
+);
 
 // ─── Leave validators ──────────────────────────────────
 

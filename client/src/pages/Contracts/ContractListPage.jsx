@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/Common/DataTable';
-import { Plus, FileText, CheckCircle2, AlertCircle, X, DollarSign } from 'lucide-react';
+import { Plus, FileText, CheckCircle2, AlertCircle, X, DollarSign, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -29,25 +29,14 @@ export default function ContractListPage() {
         api.get('/employees'),
         api.get('/salary/structures')
       ]);
-      setContracts(Array.isArray(contRes.data.data) ? contRes.data.data : (contRes.data.data?.data || []));
-      setEmployees(Array.isArray(empRes.data.data) ? empRes.data.data : (empRes.data.data?.data || []));
-      setStructures(Array.isArray(structRes.data.data) ? structRes.data.data : (structRes.data.data?.data || []));
+      const contractsList = contRes.data.data?.items || (Array.isArray(contRes.data.data) ? contRes.data.data : []);
+      const empsList = empRes.data.data?.items || (Array.isArray(empRes.data.data) ? empRes.data.data : []);
+      const structsList = Array.isArray(structRes.data.data) ? structRes.data.data : (structRes.data.data?.items || []);
+      setContracts(contractsList);
+      setEmployees(empsList);
+      setStructures(structsList);
     } catch (err) {
-      // Mock contracts for demo
-      setContracts([
-        { id: 'c1', employee: { firstName: 'John', lastName: 'Doe', code: 'EMP-0001' }, salaryStructure: { name: 'Standard Full-Time (Exempt)' }, baseSalary: 8500, wageType: 'MONTHLY', startDate: '2023-01-15', status: 'ACTIVE' },
-        { id: 'c2', employee: { firstName: 'Jane', lastName: 'Smith', code: 'EMP-0002' }, salaryStructure: { name: 'Executive Package' }, baseSalary: 11000, wageType: 'MONTHLY', startDate: '2023-03-01', status: 'ACTIVE' },
-        { id: 'c3', employee: { firstName: 'Michael', lastName: 'Brown', code: 'EMP-0003' }, salaryStructure: { name: 'Sales Commission Tier 1' }, baseSalary: 6200, wageType: 'MONTHLY', startDate: '2023-06-10', status: 'ACTIVE' },
-      ]);
-      setEmployees([
-        { id: '1', firstName: 'John', lastName: 'Doe', code: 'EMP-0001' },
-        { id: '2', firstName: 'Jane', lastName: 'Smith', code: 'EMP-0002' },
-      ]);
-      setStructures([
-        { id: 's1', name: 'Standard Full-Time (Exempt)' },
-        { id: 's2', name: 'Executive Package' },
-        { id: 's3', name: 'Sales Commission Tier 1' },
-      ]);
+      toast.error('Failed to load contract records from database');
     } finally {
       setLoading(false);
     }
@@ -63,13 +52,35 @@ export default function ContractListPage() {
       await api.post('/contracts', {
         ...formData,
         baseSalary: parseFloat(formData.baseSalary),
+        basicWage: parseFloat(formData.baseSalary),
+        salaryStructureId: formData.salaryStructureId || null,
         endDate: formData.endDate || null,
       });
       toast.success('Contract created successfully');
       setIsModalOpen(false);
+      setFormData({
+        employeeId: '',
+        salaryStructureId: '',
+        baseSalary: '',
+        wageType: 'MONTHLY',
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: '',
+        status: 'ACTIVE',
+      });
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Failed to create contract');
+    }
+  };
+
+  const handleDeleteContract = async (contractId) => {
+    if (!window.confirm('Are you sure you want to remove this contract?')) return;
+    try {
+      await api.delete(`/contracts/${contractId}`);
+      toast.success('Contract removed successfully');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to delete contract');
     }
   };
 
@@ -81,7 +92,9 @@ export default function ContractListPage() {
       render: (_, row) => (
         <div>
           <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</div>
+          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+            {row.employee?.employeeCode || row.employee?.code || 'EMP-XXXX'}
+          </div>
         </div>
       )
     },
@@ -97,7 +110,7 @@ export default function ContractListPage() {
       sortable: true,
       render: (val, row) => (
         <span style={{ fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-          ${parseFloat(val || 0).toLocaleString()} / {row.wageType?.toLowerCase()}
+          ${parseFloat(row.basicWage || val || 0).toLocaleString()} / {(row.wageType || 'MONTHLY').toLowerCase()}
         </span>
       )
     },
@@ -118,6 +131,22 @@ export default function ContractListPage() {
         <span className={`badge ${val === 'ACTIVE' ? 'badge-success' : 'badge-warning'}`}>
           {val}
         </span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={() => handleDeleteContract(row.id)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#e11d48' }}
+            title="Cancel/Delete contract"
+          >
+            <Trash2 size={13} /> Delete
+          </button>
+        </div>
       )
     }
   ];
@@ -142,7 +171,7 @@ export default function ContractListPage() {
             <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               Employment Contracts
             </h1>
-            <span className="badge badge-cyan">Active Agreements</span>
+            <span className="badge badge-cyan">{contracts.length} Agreements Active</span>
           </div>
           <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
             Define wage terms, linked salary structures, and contractual timelines per employee.
@@ -162,6 +191,7 @@ export default function ContractListPage() {
       <DataTable
         columns={columns}
         data={contracts}
+        loading={loading}
         searchPlaceholder="Search contracts by employee name or code..."
       />
 
@@ -189,15 +219,14 @@ export default function ContractListPage() {
                 >
                   <option value="">Select Employee...</option>
                   {employees.map((e) => (
-                    <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.code})</option>
+                    <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeCode || e.code || 'EMP'})</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Salary Structure *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Salary Structure</label>
                 <select
-                  required
                   value={formData.salaryStructureId}
                   onChange={(e) => setFormData({ ...formData, salaryStructureId: e.target.value })}
                   className="form-select"

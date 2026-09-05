@@ -14,7 +14,7 @@ export default function PayslipListPage() {
     setLoading(true);
     try {
       const { data } = await api.get('/payslips');
-      setPayslips(Array.isArray(data.data) ? data.data : (data.data?.data || []));
+      setPayslips(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setPayslips([
         {

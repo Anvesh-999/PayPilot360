@@ -26,8 +26,10 @@ export default function SalaryStructurePage() {
         api.get('/salary/structures'),
         api.get('/salary/rules')
       ]);
-      setStructures(Array.isArray(strRes.data.data) ? strRes.data.data : (strRes.data.data?.data || []));
-      setRules(Array.isArray(rulRes.data.data) ? rulRes.data.data : (rulRes.data.data?.data || []));
+      const strItems = Array.isArray(strRes.data.data) ? strRes.data.data : (strRes.data.data?.items || []);
+      const rulItems = Array.isArray(rulRes.data.data) ? rulRes.data.data : (rulRes.data.data?.items || []);
+      setStructures(strItems);
+      setRules(rulItems);
     } catch (err) {
       setStructures([
         { id: 's1', name: 'Standard Full-Time (Exempt)', code: 'STR-FULLTIME', description: 'Standard salary package with basic, HRA, PF and taxes', rulesCount: 6 },

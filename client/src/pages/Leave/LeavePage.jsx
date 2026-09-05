@@ -29,8 +29,10 @@ export default function LeavePage() {
         api.get('/leave/requests'),
         api.get('/leave/types')
       ]);
-      setRequests(Array.isArray(reqRes.data.data) ? reqRes.data.data : (reqRes.data.data?.data || []));
-      setLeaveTypes(Array.isArray(typeRes.data.data) ? typeRes.data.data : (typeRes.data.data?.data || []));
+      const reqItems = reqRes.data.data?.items || (Array.isArray(reqRes.data.data) ? reqRes.data.data : []);
+      const typeItems = Array.isArray(typeRes.data.data) ? typeRes.data.data : (typeRes.data.data?.items || []);
+      setRequests(reqItems);
+      setLeaveTypes(typeItems);
     } catch (err) {
       setRequests([
         { id: 'lr1', employee: { firstName: 'Michael', lastName: 'Brown', code: 'EMP-0003' }, leaveType: { name: 'Paid Annual Leave', paid: true }, startDate: '2026-03-10', endDate: '2026-03-12', totalDays: 3, reason: 'Family trip', status: 'PENDING' },

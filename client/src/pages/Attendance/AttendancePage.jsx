@@ -22,7 +22,7 @@ export default function AttendancePage() {
     setLoading(true);
     try {
       const { data } = await api.get('/attendance');
-      setLogs(Array.isArray(data.data) ? data.data : (data.data?.data || []));
+      setLogs(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (err) {
       setLogs([
         { id: '1', employee: { firstName: 'John', lastName: 'Doe', code: 'EMP-0001' }, date: '2026-03-05', checkIn: '2026-03-05T09:02:00Z', checkOut: '2026-03-05T17:30:00Z', status: 'PRESENT', totalHours: 8.46 },
@@ -38,7 +38,7 @@ export default function AttendancePage() {
   const fetchEmployees = async () => {
     try {
       const { data } = await api.get('/employees');
-      setEmployees(Array.isArray(data.data) ? data.data : (data.data?.data || []));
+      setEmployees(data.data?.items || (Array.isArray(data.data) ? data.data : []));
     } catch (e) {}
   };
 

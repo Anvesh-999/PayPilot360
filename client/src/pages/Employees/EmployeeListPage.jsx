@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import DataTable from '../../components/Common/DataTable';
-import { Plus, User, Mail, Building, Briefcase, Eye, CheckCircle2, X, Search, Filter, Phone, Calendar } from 'lucide-react';
+import { Plus, User, Mail, Building, Briefcase, Eye, CheckCircle2, X, Search, Filter, Phone, Calendar, Edit2, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -26,17 +26,26 @@ function getAvatarGradient(name = '') {
 
 export default function EmployeeListPage() {
   const [employees, setEmployees] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [positions, setPositions] = useState([]);
-  const [selectedDept, setSelectedDept] = useState('ALL');
   const [loading, setLoading] = useState(true);
-
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedDept, setSelectedDept] = useState('ALL');
+  const [departments, setDepartments] = useState([]);
+  const [positions, setPositions] = useState([]);
 
-  // Form State
+  // Edit employee state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    departmentId: '',
+    jobPositionId: '',
+    employmentStatus: 'ACTIVE',
+  });
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -52,16 +61,10 @@ export default function EmployeeListPage() {
     setLoading(true);
     try {
       const { data } = await api.get('/employees');
-      const items = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+      const items = data.data?.items || (Array.isArray(data.data) ? data.data : (data.data?.data || []));
       setEmployees(items);
     } catch (err) {
-      setEmployees([
-        { id: '1', employeeCode: 'EMP-0001', firstName: 'Aisha', lastName: 'Verma', email: 'aisha.verma@peoplepay360.com', department: { name: 'Engineering' }, jobPosition: { title: 'Senior Software Engineer' }, employmentStatus: 'ACTIVE', joiningDate: '2025-01-15' },
-        { id: '2', employeeCode: 'EMP-0002', firstName: 'Rohan', lastName: 'Sharma', email: 'rohan.sharma@peoplepay360.com', department: { name: 'Engineering' }, jobPosition: { title: 'Software Engineer' }, employmentStatus: 'ACTIVE', joiningDate: '2025-03-01' },
-        { id: '3', employeeCode: 'EMP-0003', firstName: 'Priya', lastName: 'Nair', email: 'priya.nair@peoplepay360.com', department: { name: 'Engineering' }, jobPosition: { title: 'Tech Lead' }, employmentStatus: 'ACTIVE', joiningDate: '2025-06-10' },
-        { id: '4', employeeCode: 'EMP-0004', firstName: 'Vikram', lastName: 'Singh', email: 'vikram.singh@peoplepay360.com', department: { name: 'Sales' }, jobPosition: { title: 'Sales Manager' }, employmentStatus: 'ACTIVE', joiningDate: '2025-02-01' },
-        { id: '5', employeeCode: 'EMP-0005', firstName: 'Kavya', lastName: 'Iyer', email: 'kavya.iyer@peoplepay360.com', department: { name: 'HR & Admin' }, jobPosition: { title: 'HR Executive' }, employmentStatus: 'ACTIVE', joiningDate: '2025-04-15' },
-      ]);
+      toast.error('Failed to load employees from server');
     } finally {
       setLoading(false);
     }
@@ -73,22 +76,12 @@ export default function EmployeeListPage() {
         api.get('/departments'),
         api.get('/job-positions')
       ]);
-      const depts = Array.isArray(deptRes.data.data) ? deptRes.data.data : (deptRes.data.data?.data || []);
-      const poses = Array.isArray(posRes.data.data) ? posRes.data.data : (posRes.data.data?.data || []);
+      const depts = Array.isArray(deptRes.data.data) ? deptRes.data.data : (deptRes.data.data?.items || []);
+      const poses = Array.isArray(posRes.data.data) ? posRes.data.data : (posRes.data.data?.items || []);
       setDepartments(depts);
       setPositions(poses);
     } catch (e) {
-      setDepartments([
-        { id: 'd1', name: 'Engineering' },
-        { id: 'd2', name: 'Sales' },
-        { id: 'd3', name: 'HR & Admin' },
-      ]);
-      setPositions([
-        { id: 'p1', title: 'Senior Software Engineer' },
-        { id: 'p2', title: 'Software Engineer' },
-        { id: 'p3', title: 'Sales Manager' },
-        { id: 'p4', title: 'HR Executive' },
-      ]);
+      // Fallback
     }
   };
 
@@ -100,7 +93,13 @@ export default function EmployeeListPage() {
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await api.post('/employees', formData);
+      const payload = {
+        ...formData,
+        phone: formData.phone || null,
+        departmentId: formData.departmentId || null,
+        jobPositionId: formData.jobPositionId || null,
+      };
+      await api.post('/employees', payload);
       toast.success('Employee onboarded successfully');
       setIsModalOpen(false);
       setFormData({
@@ -116,6 +115,53 @@ export default function EmployeeListPage() {
       fetchEmployees();
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Failed to create employee');
+    }
+  };
+
+  const handleEditClick = (emp) => {
+    setEditingEmployee(emp);
+    setEditFormData({
+      firstName: emp.firstName || '',
+      lastName: emp.lastName || '',
+      phone: emp.phone || '',
+      departmentId: emp.departmentId || emp.department?.id || '',
+      jobPositionId: emp.jobPositionId || emp.jobPosition?.id || '',
+      employmentStatus: emp.employmentStatus || emp.status || 'ACTIVE',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateEmployee = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        firstName: editFormData.firstName,
+        lastName: editFormData.lastName,
+        phone: editFormData.phone || null,
+        departmentId: editFormData.departmentId || null,
+        jobPositionId: editFormData.jobPositionId || null,
+        employmentStatus: editFormData.employmentStatus,
+      };
+      await api.put(`/employees/${editingEmployee.id}`, payload);
+      toast.success('Employee updated successfully');
+      setIsEditModalOpen(false);
+      fetchEmployees();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to update employee');
+    }
+  };
+
+  const handleDeleteEmployee = async (emp) => {
+    const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.employeeCode;
+    if (!window.confirm(`Are you sure you want to terminate employee ${fullName}?`)) {
+      return;
+    }
+    try {
+      await api.delete(`/employees/${emp.id}`);
+      toast.success(`Employee ${fullName} terminated successfully`);
+      fetchEmployees();
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to terminate employee');
     }
   };
 
@@ -147,15 +193,15 @@ export default function EmployeeListPage() {
               fontWeight: 700,
               fontSize: '13px',
               flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
             }}>
               {initials || 'EM'}
             </div>
             <div>
-              <div style={{ fontWeight: 600, color: '#ffffff', fontSize: '0.9rem' }}>
+              <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.9rem' }}>
                 {fullName}
               </div>
-              <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
+              <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
                 {row.email}
               </div>
             </div>
@@ -170,10 +216,11 @@ export default function EmployeeListPage() {
       render: (val, row) => (
         <span style={{
           fontFamily: 'monospace',
-          color: '#38bdf8',
+          color: '#6366f1',
           fontSize: '0.8rem',
-          backgroundColor: 'rgba(56, 189, 248, 0.08)',
-          border: '1px solid rgba(56, 189, 248, 0.2)',
+          fontWeight: 700,
+          backgroundColor: '#eef2ff',
+          border: '1px solid #c7d2fe',
           padding: '2px 8px',
           borderRadius: '5px'
         }}>
@@ -220,7 +267,7 @@ export default function EmployeeListPage() {
       label: 'Start Date',
       sortable: true,
       render: (val) => (
-        <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+        <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
           {val ? new Date(val).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
         </span>
       )
@@ -229,14 +276,30 @@ export default function EmployeeListPage() {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <button
             onClick={() => { setSelectedEmployee(row); setIsDetailOpen(true); }}
             className="btn btn-secondary btn-sm"
-            style={{ padding: '5px 9px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             title="Inspect profile"
           >
-            <Eye size={14} /> Profile
+            <Eye size={13} /> View
+          </button>
+          <button
+            onClick={() => handleEditClick(row)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#4f46e5' }}
+            title="Edit employee details"
+          >
+            <Edit2 size={13} /> Edit
+          </button>
+          <button
+            onClick={() => handleDeleteEmployee(row)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#e11d48' }}
+            title="Terminate employee"
+          >
+            <Trash2 size={13} /> Delete
           </button>
         </div>
       )
@@ -262,12 +325,12 @@ export default function EmployeeListPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-              Staff & Workforce Directory
+              Employee Directory
             </h1>
-            <span className="badge badge-purple">{employees.length} Personnel</span>
+            <span className="badge badge-purple">{employees.length} Staff Enrolled</span>
           </div>
-          <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '0.86rem', marginTop: '4px' }}>
-            Manage staff profiles, departmental allocations, compensation terms, and records.
+          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
+            Manage staff profiles, departmental allocations, and work engagements in MySQL.
           </p>
         </div>
 
@@ -277,73 +340,50 @@ export default function EmployeeListPage() {
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           <Plus size={16} />
-          <span>Onboard New Employee</span>
+          <span>Onboard Employee</span>
         </button>
       </div>
 
-      {/* Department Filter Chips */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700, marginRight: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Filter Unit:
-        </span>
-        <button
-          onClick={() => setSelectedDept('ALL')}
-          style={{
-            padding: '6px 14px',
-            borderRadius: '999px',
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: selectedDept === 'ALL' ? '#6366f1' : '#ffffff',
-            color: selectedDept === 'ALL' ? '#ffffff' : '#475569',
-            border: selectedDept === 'ALL' ? '1px solid #6366f1' : '1px solid var(--border-color)',
-            boxShadow: selectedDept === 'ALL' ? '0 3px 10px rgba(99, 102, 241, 0.3)' : 'var(--shadow-xs)',
-            transition: 'all 0.15s ease'
-          }}
-        >
-          All Units ({employees.length})
-        </button>
-        {departments.map((dept) => {
-          const count = employees.filter(e => e.department?.name === dept.name).length;
-          const isSelected = selectedDept === dept.name;
-          return (
-            <button
-              key={dept.id}
-              onClick={() => setSelectedDept(dept.name)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '999px',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                backgroundColor: isSelected ? '#8b5cf6' : '#ffffff',
-                color: isSelected ? '#ffffff' : '#475569',
-                border: isSelected ? '1px solid #8b5cf6' : '1px solid var(--border-color)',
-                boxShadow: isSelected ? '0 3px 10px rgba(139, 92, 246, 0.3)' : 'var(--shadow-xs)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {dept.name} ({count})
-            </button>
-          );
-        })}
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginRight: '6px' }}>Filter by Dept:</span>
+        {['ALL', 'Engineering', 'Sales', 'HR & Admin'].map((dept) => (
+          <button
+            key={dept}
+            onClick={() => setSelectedDept(dept)}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '999px',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: selectedDept === dept ? '1px solid #6366f1' : '1px solid #e2e8f0',
+              backgroundColor: selectedDept === dept ? '#eef2ff' : '#ffffff',
+              color: selectedDept === dept ? '#4338ca' : '#64748b',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {dept === 'ALL' ? 'All Units' : dept}
+          </button>
+        ))}
       </div>
 
       {/* Main Table */}
       <DataTable
         columns={columns}
         data={filteredEmployees}
-        searchPlaceholder="Filter employees by name, staff ID, or email..."
+        loading={loading}
+        searchPlaceholder="Search employees by name, email, or staff code..."
       />
 
-      {/* Create Employee Modal */}
+      {/* Onboard Employee Modal */}
       {isModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '600px', width: '100%', padding: '26px' }}>
+          <div className="modal-content" style={{ maxWidth: '560px', width: '100%', padding: '26px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
               <div>
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Onboard New Employee</h2>
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Fill in personal and organizational details</span>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Saves employee to MySQL and initializes user portal access</span>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -451,13 +491,13 @@ export default function EmployeeListPage() {
                     className="form-select"
                   >
                     <option value="ACTIVE">ACTIVE</option>
-                    <option value="ON_LEAVE">ON LEAVE</option>
+                    <option value="ON_LEAVE">ON_LEAVE</option>
                     <option value="SUSPENDED">SUSPENDED</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -469,7 +509,7 @@ export default function EmployeeListPage() {
                   type="submit"
                   className="btn btn-primary"
                 >
-                  Save Employee Profile
+                  Confirm Onboard
                 </button>
               </div>
             </form>
@@ -477,12 +517,127 @@ export default function EmployeeListPage() {
         </div>
       )}
 
-      {/* Employee Detail Modal */}
+      {/* Edit Employee Modal */}
+      {isEditModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '540px', width: '100%', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Edit Employee</h2>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{editingEmployee?.employeeCode} &bull; {editingEmployee?.email}</span>
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEmployee} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>First Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.firstName}
+                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Last Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFormData.lastName}
+                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Phone Contact</label>
+                <input
+                  type="text"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  placeholder="+91-9876543210"
+                  className="form-input"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Department</label>
+                  <select
+                    value={editFormData.departmentId}
+                    onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select Department...</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Job Position</label>
+                  <select
+                    value={editFormData.jobPositionId}
+                    onChange={(e) => setEditFormData({ ...editFormData, jobPositionId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Select Position...</option>
+                    {positions.map((p) => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Employment Status</label>
+                <select
+                  value={editFormData.employmentStatus}
+                  onChange={(e) => setEditFormData({ ...editFormData, employmentStatus: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="ON_LEAVE">ON_LEAVE</option>
+                  <option value="SUSPENDED">SUSPENDED</option>
+                  <option value="TERMINATED">TERMINATED</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inspect Profile Modal */}
       {isDetailOpen && selectedEmployee && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '500px', width: '100%', padding: '26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Personnel Card</h2>
+          <div className="modal-content" style={{ maxWidth: '520px', width: '100%', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Staff Verification Profile</h2>
               <button
                 onClick={() => setIsDetailOpen(false)}
                 style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
@@ -491,12 +646,12 @@ export default function EmployeeListPage() {
               </button>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
               <div style={{
-                width: '52px',
-                height: '52px',
-                borderRadius: '12px',
-                background: getAvatarGradient(`${selectedEmployee.firstName} ${selectedEmployee.lastName}`),
+                width: '56px',
+                height: '56px',
+                borderRadius: '14px',
+                background: getAvatarGradient(selectedEmployee.firstName),
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

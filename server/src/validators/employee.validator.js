@@ -1,24 +1,27 @@
 const { z } = require('zod');
 
+const emptyToNull = (val) => (val === '' || val === undefined ? null : val);
+
 const employeeBaseSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email('Invalid email format'),
-  phone: z.string().regex(/^[0-9+\-\s]{7,20}$/, 'Invalid phone format').optional().nullable(),
-  departmentId: z.string().uuid().optional().nullable(),
-  jobPositionId: z.string().uuid().optional().nullable(),
-  managerId: z.string().uuid().optional().nullable(),
-  workingScheduleId: z.string().uuid().optional().nullable(),
+  phone: z.preprocess(emptyToNull, z.string().regex(/^[0-9+\-\s]{7,20}$/, 'Invalid phone format').nullable().optional()),
+  departmentId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  jobPositionId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  managerId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
+  workingScheduleId: z.preprocess(emptyToNull, z.string().uuid().nullable().optional()),
   joiningDate: z.coerce.date(),
   employmentStatus: z.enum(['ACTIVE', 'ON_LEAVE', 'SUSPENDED', 'TERMINATED']).default('ACTIVE'),
+  status: z.string().optional(),
   employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN']).default('FULL_TIME'),
-  bankAccountName: z.string().max(100).optional().nullable(),
-  bankAccountNumber: z.string().regex(/^[0-9]{9,18}$/, 'Bank account must be 9-18 digits').optional().nullable(),
-  bankIfsc: z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code').optional().nullable(),
-  profilePhotoUrl: z.string().url().optional().nullable(),
-  dateOfBirth: z.coerce.date().optional().nullable(),
-  gender: z.string().optional().nullable(),
-  address: z.string().max(500).optional().nullable(),
+  bankAccountName: z.preprocess(emptyToNull, z.string().max(100).nullable().optional()),
+  bankAccountNumber: z.preprocess(emptyToNull, z.string().regex(/^[0-9]{9,18}$/, 'Bank account must be 9-18 digits').nullable().optional()),
+  bankIfsc: z.preprocess(emptyToNull, z.string().regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, 'Invalid IFSC code').nullable().optional()),
+  profilePhotoUrl: z.preprocess(emptyToNull, z.string().url().nullable().optional()),
+  dateOfBirth: z.preprocess(emptyToNull, z.coerce.date().nullable().optional()),
+  gender: z.preprocess(emptyToNull, z.string().nullable().optional()),
+  address: z.preprocess(emptyToNull, z.string().max(500).nullable().optional()),
 });
 
 const employeeCreateSchema = employeeBaseSchema.refine(

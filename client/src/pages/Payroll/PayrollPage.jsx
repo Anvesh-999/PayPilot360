@@ -36,7 +36,7 @@ export default function PayrollPage() {
     setLoading(true);
     try {
       const { data } = await api.get('/payroll/payruns');
-      const runs = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+      const runs = data.data?.items || (Array.isArray(data.data) ? data.data : []);
       setPayruns(runs);
       if (runs.length > 0) {
         setActivePayrun(runs[0]);
