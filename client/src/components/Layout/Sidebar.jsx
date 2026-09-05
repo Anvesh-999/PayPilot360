@@ -18,7 +18,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const role = user?.role;
   const isEmployee = role === 'EMPLOYEE';
 
-  const isHR = hasRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']);
+  const isHR = hasRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
   const isHRManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
   const isPayroll = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
   const isPayrollManager = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']);
@@ -45,7 +45,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       items: [
         { path: '/payroll', label: 'Payroll Cycles', icon: Calculator, color: '#2563eb', bg: '#eff6ff', show: isPayroll },
         { path: '/payslips', label: isEmployee ? 'My Payslips' : 'Employee Payslips', icon: Receipt, color: '#e11d48', bg: '#fff1f2', show: true },
-        { path: '/salary-structures', label: 'Salary Structures', icon: Layers, color: '#c026d3', bg: '#fdf4ff', show: isPayrollManager },
+        { path: '/salary-structures', label: 'Salary Structures', icon: Layers, color: '#c026d3', bg: '#fdf4ff', show: isPayrollManager || isHRManager },
       ]
     },
     ...(isEmployee ? [] : [{
@@ -76,51 +76,51 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     >
       {/* Brand Header */}
       <div style={{
-        padding: collapsed ? '18px 12px' : '18px 20px',
+        padding: collapsed ? '18px 12px' : '20px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'space-between',
-        borderBottom: '1px solid #f1f5f9',
-        background: 'linear-gradient(180deg, #ffffff 0%, #fafafa 100%)'
+        borderBottom: '1px solid #f0eef6',
+        background: 'linear-gradient(180deg, #ffffff 0%, #faf9fd 100%)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '38px',
             height: '38px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            borderRadius: '11px',
+            background: 'linear-gradient(135deg, #5554aa 0%, #757498 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.25)',
+            boxShadow: '0 4px 14px rgba(85, 84, 170, 0.25)',
             fontWeight: 800,
             color: '#ffffff',
-            fontSize: '17px',
+            fontSize: '16px',
             letterSpacing: '-0.02em',
             flexShrink: 0
           }}>
-            P3
+            IW
           </div>
           {!collapsed && (
             <div>
               <div style={{
-                fontSize: '1.08rem',
+                fontSize: '1.05rem',
                 fontWeight: 800,
                 letterSpacing: '-0.03em',
-                color: '#0f172a',
+                color: '#181837',
                 lineHeight: 1.2
               }}>
-                PeoplePay<span style={{ color: '#6366f1' }}>360</span>
+                PeoplePay<span style={{ color: '#5554aa' }}>360</span>
               </div>
               <div style={{
-                fontSize: '0.68rem',
-                color: '#64748b',
+                fontSize: '0.66rem',
+                color: '#6b6a8a',
                 fontWeight: 600,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 marginTop: '1px'
               }}>
-                Payroll & HR Suite
+                Innowise HR Suite
               </div>
             </div>
           )}
@@ -137,9 +137,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             <div key={sIdx} style={{ marginBottom: '18px' }}>
               {!collapsed && (
                 <div style={{
-                  fontSize: '0.66rem',
+                  fontSize: '0.64rem',
                   fontWeight: 700,
-                  color: '#94a3b8',
+                  color: '#9b9ab5',
                   padding: '4px 12px 6px 12px',
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase'
@@ -147,7 +147,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   {section.title}
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -158,18 +158,18 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                       style={({ isActive }) => ({
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
-                        padding: collapsed ? '11px' : '9px 12px',
+                        gap: '11px',
+                        padding: collapsed ? '10px' : '8px 12px',
                         justifyContent: collapsed ? 'center' : 'flex-start',
-                        borderRadius: '10px',
+                        borderRadius: '12px',
                         textDecoration: 'none',
-                        color: isActive ? item.color : '#475569',
-                        backgroundColor: isActive ? item.bg : 'transparent',
-                        fontWeight: isActive ? 600 : 500,
-                        fontSize: '0.875rem',
-                        transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
-                        border: isActive ? `1px solid ${item.color}35` : '1px solid transparent',
-                        boxShadow: isActive ? `0 2px 8px ${item.color}15` : 'none'
+                        color: isActive ? '#3c3a88' : '#4a4968',
+                        backgroundColor: isActive ? '#f0f0ff' : 'transparent',
+                        fontWeight: isActive ? 700 : 500,
+                        fontSize: '0.86rem',
+                        transition: 'all 0.16s ease',
+                        border: isActive ? '1px solid #d4d3f5' : '1px solid transparent',
+                        boxShadow: isActive ? '0 2px 8px rgba(85, 84, 170, 0.08)' : 'none'
                       })}
                     >
                       {({ isActive }) => (
@@ -178,11 +178,15 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            width: '24px',
-                            height: '24px',
-                            color: item.color
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '8px',
+                            backgroundColor: isActive ? '#5554aa' : '#f4f3f9',
+                            color: isActive ? '#ffffff' : '#6b6a8a',
+                            transition: 'all 0.15s ease',
+                            flexShrink: 0
                           }}>
-                            <Icon size={18} />
+                            <Icon size={16} />
                           </div>
                           {!collapsed && (
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -194,8 +198,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                               width: '6px',
                               height: '6px',
                               borderRadius: '50%',
-                              backgroundColor: item.color,
-                              boxShadow: `0 0 6px ${item.color}80`
+                              backgroundColor: '#5554aa',
+                              boxShadow: '0 0 6px rgba(85, 84, 170, 0.8)'
                             }} />
                           )}
                         </>
@@ -209,42 +213,88 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         })}
       </nav>
 
-      {/* Collapse Toggle / System Status Footer */}
+        {/* Collapse Toggle / User Profile Footer (Innowise Style) */}
       <div style={{
-        padding: '12px 16px',
-        borderTop: '1px solid #f1f5f9',
+        padding: collapsed ? '12px 8px' : '14px 16px',
+        borderTop: '1px solid #f0eef6',
+        backgroundColor: '#faf9fd',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'space-between',
-        backgroundColor: '#fafafa'
+        flexDirection: 'column',
+        gap: '10px'
       }}>
-        {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="status-dot active" />
-            <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>
-              Cloud Active
-            </span>
-          </div>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            color: '#64748b',
-            cursor: 'pointer',
-            padding: '5px',
-            borderRadius: '6px',
+        {!collapsed && user && (
+          <div style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-            transition: 'all 0.15s ease'
-          }}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <ChevronRight size={15} style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }} />
-        </button>
+            gap: '10px',
+            padding: '8px 10px',
+            borderRadius: '10px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e8e6f0',
+            boxShadow: '0 1px 3px rgba(24, 24, 55, 0.03)'
+          }}>
+            <div style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '9px',
+              background: 'linear-gradient(135deg, #5554aa 0%, #757498 100%)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              flexShrink: 0
+            }}>
+              {user.email?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#181837', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user.employee?.name || user.email?.split('@')[0]}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block' }} />
+                <span style={{ fontSize: '0.68rem', color: '#6b6a8a', fontWeight: 600, textTransform: 'capitalize' }}>
+                  {user.role?.replace('_', ' ').toLowerCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between'
+        }}>
+          {!collapsed && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#5554aa', display: 'inline-block' }} />
+              <span style={{ fontSize: '0.7rem', color: '#6b6a8a', fontWeight: 600 }}>
+                Innowise Suite v2.4
+              </span>
+            </div>
+          )}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e5e3ec',
+              color: '#5554aa',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              transition: 'all 0.15s ease'
+            }}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <ChevronRight size={14} style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }} />
+          </button>
+        </div>
       </div>
     </aside>
   );

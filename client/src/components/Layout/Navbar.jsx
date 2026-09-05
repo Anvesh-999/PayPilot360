@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Clock, Calendar } from 'lucide-react';
+import { LogOut, Clock, Calendar, Search, Bell } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,7 @@ export default function Navbar() {
   const [clockedIn, setClockedIn] = useState(false);
   const [clockLoading, setClockLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     async function checkAttendance() {
@@ -51,13 +52,13 @@ export default function Navbar() {
   const getRoleBadge = (role) => {
     switch (role) {
       case 'SUPER_ADMIN':
-        return { label: 'Super Admin', className: 'badge-purple' };
+        return { label: 'Super Admin', className: 'badge-innowise' };
       case 'HR_MANAGER':
         return { label: 'HR Manager', className: 'badge-cyan' };
       case 'PAYROLL_MANAGER':
-        return { label: 'Payroll Manager', className: 'badge-blue' };
+        return { label: 'Payroll Manager', className: 'badge-innowise' };
       case 'PAYROLL_USER':
-        return { label: 'Payroll Staff', className: 'badge-blue' };
+        return { label: 'Payroll Staff', className: 'badge-info' };
       case 'HR_STAFF':
         return { label: 'HR Staff', className: 'badge-warning' };
       default:
@@ -74,10 +75,10 @@ export default function Navbar() {
 
   return (
     <header style={{
-      height: '64px',
-      backgroundColor: 'rgba(255, 255, 255, 0.92)',
+      height: '66px',
+      backgroundColor: 'rgba(255, 255, 255, 0.94)',
       backdropFilter: 'blur(16px)',
-      borderBottom: '1px solid #e2e8f0',
+      borderBottom: '1px solid #f0eef6',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -85,25 +86,47 @@ export default function Navbar() {
       position: 'sticky',
       top: 0,
       zIndex: 30,
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
+      boxShadow: '0 1px 4px rgba(24, 24, 55, 0.03)'
     }}>
-      {/* Left Greeting & Date */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.94rem', fontWeight: 700, color: '#0f172a' }}>
-              Welcome back, {user?.employee?.firstName || user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Member'}
-            </span>
-            <span className={`badge ${roleInfo.className}`} style={{ fontSize: '0.7rem', padding: '1px 8px' }}>
-              {roleInfo.label}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Calendar size={12} color="#94a3b8" />
-            <span>
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
+      {/* Left: Search Bar (Innowise Style) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, maxWidth: '420px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: '#f6f5fb',
+          padding: '7px 14px',
+          borderRadius: '999px',
+          border: '1px solid #e5e3ec',
+          width: '100%',
+          transition: 'all 0.15s ease'
+        }}>
+          <Search size={15} color="#6b6a8a" />
+          <input
+            type="text"
+            placeholder="Search staff, contracts, payslips..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              fontSize: '0.82rem',
+              color: '#181837',
+              width: '100%'
+            }}
+          />
+          <span style={{
+            fontSize: '0.66rem',
+            fontWeight: 700,
+            color: '#9b9ab5',
+            backgroundColor: '#ffffff',
+            padding: '2px 6px',
+            borderRadius: '5px',
+            border: '1px solid #e5e3ec'
+          }}>
+            Ctrl+K
+          </span>
         </div>
       </div>
 
@@ -162,35 +185,82 @@ export default function Navbar() {
           </span>
         </button>
 
-        {/* User Monogram Pill */}
+        {/* Notification Bell (Innowise Style) */}
+        <button
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '10px',
+            backgroundColor: '#f6f5fb',
+            border: '1px solid #e5e3ec',
+            color: '#5554aa',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            position: 'relative',
+            transition: 'all 0.15s ease'
+          }}
+          title="Notifications"
+        >
+          <Bell size={16} />
+          <span style={{
+            position: 'absolute',
+            top: '7px',
+            right: '7px',
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#f43f5e',
+            border: '1.5px solid #ffffff'
+          }} />
+        </button>
+
+        {/* User Monogram Pill (Innowise Style) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          padding: '4px 10px 4px 6px',
+          padding: '4px 12px 4px 6px',
           background: '#ffffff',
           borderRadius: '999px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)'
+          border: '1px solid #e5e3ec',
+          boxShadow: '0 1px 3px rgba(24, 24, 55, 0.03)'
         }}>
           <div style={{
-            width: '30px',
-            height: '30px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: 'linear-gradient(135deg, #5554aa 0%, #757498 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 700,
             color: '#ffffff',
             fontSize: '13px',
-            boxShadow: '0 2px 8px rgba(99, 102, 241, 0.25)'
+            boxShadow: '0 2px 8px rgba(85, 84, 170, 0.25)',
+            position: 'relative'
           }}>
             {userInitials}
+            <span style={{
+              position: 'absolute',
+              bottom: '0px',
+              right: '0px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: '#10b981',
+              border: '1.5px solid #ffffff'
+            }} />
           </div>
-          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {displayName}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#181837', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+              {displayName}
+            </span>
+            <span style={{ fontSize: '0.68rem', color: '#6b6a8a', fontWeight: 600, textTransform: 'capitalize' }}>
+              {roleInfo.label}
+            </span>
+          </div>
         </div>
 
         {/* Sign Out Button */}
@@ -200,8 +270,8 @@ export default function Navbar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '34px',
-            height: '34px',
+            width: '36px',
+            height: '36px',
             borderRadius: '10px',
             background: '#fff1f2',
             border: '1px solid #fecdd3',

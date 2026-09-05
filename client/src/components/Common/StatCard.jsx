@@ -5,9 +5,11 @@ export default function StatCard({
   change,
   changeType = 'positive',
   description,
-  color = '#6366f1',
-  bgColor = '#eef2ff',
-  badgeText
+  color = '#5554aa',
+  bgColor = '#f0f0ff',
+  badgeText,
+  badgePositive = true,
+  progress = null // optional number 0-100
 }) {
   const isPositive = changeType === 'positive';
 
@@ -22,9 +24,9 @@ export default function StatCard({
         flexDirection: 'column',
         justifyContent: 'space-between',
         backgroundColor: '#ffffff',
-        border: '1px solid #e2e8f0',
+        border: '1px solid var(--border-color)',
         borderRadius: '16px',
-        boxShadow: '0 4px 14px rgba(15, 23, 42, 0.04)',
+        boxShadow: 'var(--shadow-sm)',
         transition: 'all 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
       }}
     >
@@ -38,11 +40,11 @@ export default function StatCard({
         background: `linear-gradient(90deg, ${color} 0%, transparent 80%)`
       }} />
 
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{
-              fontSize: '0.75rem',
+              fontSize: '0.74rem',
               fontWeight: 700,
               color: '#64748b',
               textTransform: 'uppercase',
@@ -51,40 +53,70 @@ export default function StatCard({
               {title}
             </span>
             {badgeText && (
-              <span className="badge badge-gray" style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  fontWeight: 600,
+                  backgroundColor: badgePositive ? '#f0fdf4' : '#fff1f2',
+                  color: badgePositive ? '#15803d' : '#be123c',
+                  border: `1px solid ${badgePositive ? '#bbf7d0' : '#fecdd3'}`
+                }}
+              >
                 {badgeText}
               </span>
             )}
           </div>
-          <div style={{
-            fontSize: '1.95rem',
-            fontWeight: 800,
-            color: '#0f172a',
-            marginTop: '8px',
-            lineHeight: 1.15,
-            letterSpacing: '-0.03em',
-            fontVariantNumeric: 'tabular-nums'
-          }}>
-            {value}
-          </div>
+
+          {Icon && (
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: bgColor || `${color}14`,
+              color: color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              border: `1px solid ${color}22`,
+              boxShadow: `0 4px 12px ${color}10`
+            }}>
+              <Icon size={20} />
+            </div>
+          )}
         </div>
 
-        {Icon && (
-          <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: bgColor || `${color}18`,
-            border: `1px solid ${color}30`,
-            color: color,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            boxShadow: `0 4px 12px ${color}15`,
-            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
-          }}>
-            <Icon size={21} />
+        <div style={{
+          fontSize: '1.95rem',
+          fontWeight: 800,
+          color: '#0f172a',
+          lineHeight: 1.15,
+          letterSpacing: '-0.03em',
+          fontVariantNumeric: 'tabular-nums'
+        }}>
+          {value}
+        </div>
+
+        {/* Optional Progress Bar (e.g. for Satisfaction, Attendance) */}
+        {progress !== null && (
+          <div style={{ marginTop: '12px' }}>
+            <div style={{
+              height: '6px',
+              width: '100%',
+              backgroundColor: '#f0eef6',
+              borderRadius: '999px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${Math.min(Math.max(progress, 0), 100)}%`,
+                backgroundColor: color,
+                borderRadius: '999px',
+                transition: 'width 0.4s ease'
+              }} />
+            </div>
           </div>
         )}
       </div>
@@ -95,18 +127,22 @@ export default function StatCard({
           alignItems: 'center',
           gap: '8px',
           fontSize: '0.78rem',
-          paddingTop: '12px',
-          borderTop: '1px solid #f1f5f9'
+          paddingTop: '14px',
+          marginTop: '12px',
+          borderTop: '1px solid var(--border-subtle)'
         }}>
           {change && (
             <span style={{
               fontWeight: 700,
-              color: isPositive ? '#065f46' : '#9f1239',
-              backgroundColor: isPositive ? '#ecfdf5' : '#fff1f2',
-              border: isPositive ? '1px solid #a7f3d0' : '1px solid #fecdd3',
+              color: isPositive ? '#15803d' : '#be123c',
+              backgroundColor: isPositive ? '#f0fdf4' : '#fff1f2',
+              border: isPositive ? '1px solid #bbf7d0' : '1px solid #fecdd3',
               padding: '2px 8px',
               borderRadius: '999px',
-              fontSize: '0.72rem'
+              fontSize: '0.72rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px'
             }}>
               {isPositive ? '↑' : '↓'} {change}
             </span>
