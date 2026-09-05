@@ -33,7 +33,7 @@ app.use(cors({
 // Rate limiting on auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: process.env.NODE_ENV === 'production' ? 20 : 500,
   message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again later.' } },
 });
 

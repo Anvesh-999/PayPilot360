@@ -1,5 +1,12 @@
 const attendanceService = require('../services/attendance.service');
 
+const getMyToday = async (req, res, next) => {
+  try {
+    const result = await attendanceService.getMyToday(req.user.employeeId, req.user.userId);
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+};
+
 const checkIn = async (req, res, next) => {
   try {
     const result = await attendanceService.checkIn(req.user.employeeId, req.user.userId);
@@ -9,7 +16,7 @@ const checkIn = async (req, res, next) => {
 
 const checkOut = async (req, res, next) => {
   try {
-    const result = await attendanceService.checkOut(req.user.employeeId);
+    const result = await attendanceService.checkOut(req.user.employeeId, req.user.userId);
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 };
@@ -28,4 +35,4 @@ const manualCorrection = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { checkIn, checkOut, list, manualCorrection };
+module.exports = { getMyToday, checkIn, checkOut, list, manualCorrection };

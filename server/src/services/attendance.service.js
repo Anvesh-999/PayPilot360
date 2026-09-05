@@ -1,18 +1,84 @@
 const prisma = require('../config/db');
 const { AppError } = require('../middleware/errorHandler');
 
+function getTodayDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+}
+
 class AttendanceService {
+  async resolveEmployeeId(employeeId, userId) {
+    if (employeeId) return employeeId;
+    if (userId) {
+      const emp = await prisma.employee.findFirst({ where: { userId } });
+      if (emp) return emp.id;
+    }
+    const fallback = await prisma.employee.findFirst({ where: { employmentStatus: 'ACTIVE' } });
+    if (fallback) return fallback.id;
+    throw new AppError('No employee profile found for attendance punch', 400, 'NO_EMPLOYEE');
+  }
+
+  /**
+   * Get employee attendance for today.
+   */
+  async getMyToday(employeeId, userId) {
+    const resolvedId = await this.resolveEmployeeId(employeeId, userId);
+    const today = getTodayDate();
+
+    let record = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: resolvedId, date: today } },
+      include: {
+        employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
+      },
+    });
+
+    if (!record) {
+      const start = new Date(today);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 1);
+      record = await prisma.attendance.findFirst({
+        where: {
+          employeeId: resolvedId,
+          createdAt: { gte: start, lt: end }
+        },
+        include: {
+          employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
+
+    return record;
+  }
+
   /**
    * Employee self check-in.
    */
   async checkIn(employeeId, userId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const resolvedId = await this.resolveEmployeeId(employeeId, userId);
+    const today = getTodayDate();
 
     // Check for existing check-in today
-    const existing = await prisma.attendance.findUnique({
-      where: { employeeId_date: { employeeId, date: today } },
+    let existing = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: resolvedId, date: today } },
     });
+
+    if (!existing) {
+      const start = new Date(today);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 1);
+      existing = await prisma.attendance.findFirst({
+        where: {
+          employeeId: resolvedId,
+          createdAt: { gte: start, lt: end }
+        }
+      });
+    }
 
     if (existing) {
       throw new AppError('Already checked in today', 400, 'DUPLICATE_CHECKIN');
@@ -20,7 +86,7 @@ class AttendanceService {
 
     // Get employee's schedule to determine lateness
     const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
+      where: { id: resolvedId },
       include: {
         workingSchedule: { include: { scheduleDays: true } },
       },
@@ -44,7 +110,7 @@ class AttendanceService {
 
     return prisma.attendance.create({
       data: {
-        employeeId,
+        employeeId: resolvedId,
         date: today,
         checkIn: now,
         status: isLate ? 'LATE' : 'PRESENT',
@@ -60,13 +126,27 @@ class AttendanceService {
   /**
    * Employee self check-out.
    */
-  async checkOut(employeeId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  async checkOut(employeeId, userId) {
+    const resolvedId = await this.resolveEmployeeId(employeeId, userId);
+    const today = getTodayDate();
 
-    const attendance = await prisma.attendance.findUnique({
-      where: { employeeId_date: { employeeId, date: today } },
+    let attendance = await prisma.attendance.findUnique({
+      where: { employeeId_date: { employeeId: resolvedId, date: today } },
     });
+
+    if (!attendance) {
+      const start = new Date(today);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 1);
+      attendance = await prisma.attendance.findFirst({
+        where: {
+          employeeId: resolvedId,
+          createdAt: { gte: start, lt: end }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
 
     if (!attendance) {
       throw new AppError('No check-in found for today', 400, 'NO_CHECKIN');
@@ -83,7 +163,7 @@ class AttendanceService {
 
     // Get schedule to compute overtime and early departure
     const employee = await prisma.employee.findUnique({
-      where: { id: employeeId },
+      where: { id: resolvedId },
       include: { workingSchedule: { include: { scheduleDays: true } } },
     });
 

@@ -6,23 +6,27 @@ class ContractService {
    * Create a new contract. Validates no overlapping ACTIVE contracts.
    */
   async create(data) {
+    const startDate = data.startDate ? new Date(data.startDate) : new Date();
+    const endDate = data.endDate ? new Date(data.endDate) : null;
+    const basicWage = data.basicWage !== undefined ? parseFloat(data.basicWage) : parseFloat(data.baseSalary || 0);
+
     // Check for overlapping ACTIVE contracts
     if (data.status === 'ACTIVE') {
-      await this.checkOverlap(data.employeeId, data.startDate, data.endDate, null);
+      await this.checkOverlap(data.employeeId, startDate, endDate, null);
     }
 
     return prisma.contract.create({
       data: {
         employeeId: data.employeeId,
-        startDate: data.startDate,
-        endDate: data.endDate || null,
+        startDate,
+        endDate,
         wageType: data.wageType || 'MONTHLY',
-        basicWage: data.basicWage,
+        basicWage,
         departmentId: data.departmentId || null,
         jobPositionId: data.jobPositionId || null,
         workingScheduleId: data.workingScheduleId || null,
         salaryStructureId: data.salaryStructureId || null,
-        status: data.status || 'DRAFT',
+        status: data.status || 'ACTIVE',
       },
       include: {
         employee: { select: { id: true, firstName: true, lastName: true, employeeCode: true } },

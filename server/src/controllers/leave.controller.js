@@ -1,3 +1,4 @@
+const prisma = require('../config/db');
 const leaveService = require('../services/leave.service');
 
 // Leave Types
@@ -47,7 +48,12 @@ const getMyBalances = async (req, res, next) => {
 // Leave Requests
 const submitRequest = async (req, res, next) => {
   try {
-    const employeeId = req.user.employeeId || req.body.employeeId;
+    let employeeId = req.user.employeeId || req.body.employeeId;
+    if (!employeeId) {
+      const emp = (req.user.userId && await prisma.employee.findFirst({ where: { userId: req.user.userId } })) ||
+                  await prisma.employee.findFirst({ where: { employmentStatus: 'ACTIVE' } });
+      employeeId = emp?.id;
+    }
     const result = await leaveService.submitRequest(employeeId, req.body);
     res.status(201).json({ success: true, data: result });
   } catch (error) { next(error); }

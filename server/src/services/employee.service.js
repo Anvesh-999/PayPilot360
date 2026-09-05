@@ -49,6 +49,10 @@ class EmployeeService {
         },
       });
 
+      // Parse dates properly for Prisma @db.Date
+      const parsedJoiningDate = data.joiningDate ? new Date(data.joiningDate) : new Date();
+      const parsedDob = data.dateOfBirth ? new Date(data.dateOfBirth) : null;
+
       // Create employee
       const employee = await tx.employee.create({
         data: {
@@ -61,14 +65,14 @@ class EmployeeService {
           jobPositionId: data.jobPositionId || null,
           managerId: data.managerId || null,
           workingScheduleId: data.workingScheduleId || null,
-          joiningDate: data.joiningDate,
-          employmentStatus: data.employmentStatus || 'ACTIVE',
+          joiningDate: parsedJoiningDate,
+          employmentStatus: data.employmentStatus || data.status || 'ACTIVE',
           employmentType: data.employmentType || 'FULL_TIME',
           bankAccountName: data.bankAccountName || null,
           bankAccountNumber: data.bankAccountNumber || null,
           bankIfsc: data.bankIfsc || null,
           profilePhotoUrl: data.profilePhotoUrl || null,
-          dateOfBirth: data.dateOfBirth || null,
+          dateOfBirth: parsedDob,
           gender: data.gender || null,
           address: data.address || null,
           userId: user.id,
@@ -185,9 +189,13 @@ class EmployeeService {
       }
     }
 
+    const updateData = { ...data };
+    if (updateData.joiningDate) updateData.joiningDate = new Date(updateData.joiningDate);
+    if (updateData.dateOfBirth) updateData.dateOfBirth = new Date(updateData.dateOfBirth);
+
     return prisma.employee.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         department: true,
         jobPosition: true,
