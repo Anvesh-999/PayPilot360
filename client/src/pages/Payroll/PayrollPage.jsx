@@ -65,6 +65,7 @@ export default function PayrollPage() {
   const [validationWarnings, setValidationWarnings] = useState([]);
   const [validating, setValidating] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   const fetchActivePayrunDetail = async (id) => {
     if (!id) return;
@@ -138,10 +139,17 @@ export default function PayrollPage() {
   };
 
   // Step 1 -> Step 2
-  const handleProceedToStep2 = (e) => {
-    e.preventDefault();
-    if (!wizardForm.name || !wizardForm.periodStart || !wizardForm.periodEnd) {
-      toast.error('Please fill in required scope details');
+  const handleNextStep = () => {
+    if (!wizardForm.name.trim()) {
+      toast.error('Please enter a descriptive payrun name (e.g., September 2026 Payroll)');
+      return;
+    }
+    if (!wizardForm.periodStart || !wizardForm.periodEnd) {
+      toast.error('Specify period start and end dates');
+      return;
+    }
+    if (new Date(wizardForm.periodStart) >= new Date(wizardForm.periodEnd)) {
+      toast.error('Period start date must be strictly before end date');
       return;
     }
     setWizardStep(2);
@@ -220,13 +228,38 @@ export default function PayrollPage() {
   // Compute Batch
   const handleCompute = async () => {
     if (!activePayrun) return;
+
+    // If cycle is locked as PAID, offer to re-open first
+    if (activePayrun.status === 'PAID') {
+      const confirmReopen = window.confirm(
+        `'${activePayrun.name}' is currently locked as PAID. Would you like to re-open it to DRAFT status and calculate all salary rules?`
+      );
+      if (!confirmReopen) return;
+      try {
+        await api.post(`/payroll/payruns/${activePayrun.id}/reset`);
+        toast.success(`'${activePayrun.name}' re-opened to DRAFT.`);
+      } catch (e) {
+        toast.error('Failed to re-open payrun for recalculation');
+        return;
+      }
+    }
+
+    setIsCalculating(true);
     try {
-      await api.post(`/payroll/payruns/${activePayrun.id}/calculate`);
-      toast.success('Payroll engine calculated all salary rules successfully');
+      // If payrun has 0 enrolled employees, auto-sync active contracted staff first
+      if (!activePayrun.payrunItems || activePayrun.payrunItems.length === 0) {
+        await api.post(`/payroll/payruns/${activePayrun.id}/sync-employees`);
+      }
+
+      const res = await api.post(`/payroll/payruns/${activePayrun.id}/calculate`);
+      const count = res.data?.data?.length || 0;
+      toast.success(`Payroll engine calculated salary rules for ${count} staff successfully!`);
       await fetchActivePayrunDetail(activePayrun.id);
       await fetchPayruns();
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Payroll calculation failed');
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -499,9 +532,9 @@ export default function PayrollPage() {
               {!isPaid && (
                 <button
                   onClick={handleSyncEmployees}
-                  disabled={isSyncing}
+                  disabled={isSyncing || isCalculating}
                   className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4338ca', borderColor: '#c7d2fe' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#4338ca', borderColor: '#c7d2fe', whiteSpace: 'nowrap' }}
                   title="Automatically enroll any newly contracted staff into this cycle"
                 >
                   <Users size={14} /> {isSyncing ? 'Syncing...' : 'Sync New Staff'}
@@ -510,30 +543,41 @@ export default function PayrollPage() {
 
               <button
                 onClick={handleCompute}
-                disabled={isPaid}
-                className="btn btn-secondary btn-sm"
+                disabled={isCalculating}
+                className={`btn ${isPaid ? 'btn-secondary' : 'btn-primary'} btn-sm`}
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  opacity: isPaid ? 0.45 : 1,
-                  cursor: isPaid ? 'not-allowed' : 'pointer'
+                  whiteSpace: 'nowrap',
+                  cursor: isCalculating ? 'not-allowed' : 'pointer'
                 }}
-                title={isPaid ? 'Cycle is settled and paid. Click Re-open Cycle to recalculate.' : 'Compute salary components for all selected staff'}
+                title={isPaid ? 'Cycle is locked as PAID. Click to re-open and recalculate.' : 'Compute and evaluate all salary rules for enrolled staff'}
               >
-                <Calculator size={14} /> Calculate Batch
+                {isCalculating ? (
+                  <>
+                    <span className="spinner" style={{ width: '13px', height: '13px', borderWidth: '2px', display: 'inline-block' }} />
+                    <span>Calculating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Calculator size={14} />
+                    <span>{isPaid ? 'Recalculate Batch' : 'Calculate Batch'}</span>
+                  </>
+                )}
               </button>
 
               <button
                 onClick={handleValidate}
-                disabled={isPaid}
+                disabled={isPaid || isCalculating}
                 className="btn btn-secondary btn-sm"
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  opacity: isPaid ? 0.45 : 1,
-                  cursor: isPaid ? 'not-allowed' : 'pointer'
+                  whiteSpace: 'nowrap',
+                  opacity: (isPaid || isCalculating) ? 0.45 : 1,
+                  cursor: (isPaid || isCalculating) ? 'not-allowed' : 'pointer'
                 }}
                 title={isPaid ? 'Audit complete and locked' : 'Verify potential warnings, missing bank info, duplicate entries'}
               >
@@ -542,14 +586,15 @@ export default function PayrollPage() {
 
               <button
                 onClick={handleApprove}
-                disabled={isPaid || activePayrun.status === 'APPROVED'}
+                disabled={isPaid || activePayrun.status === 'APPROVED' || isCalculating}
                 className="btn btn-violet btn-sm"
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  opacity: (isPaid || activePayrun.status === 'APPROVED') ? 0.45 : 1,
-                  cursor: (isPaid || activePayrun.status === 'APPROVED') ? 'not-allowed' : 'pointer'
+                  whiteSpace: 'nowrap',
+                  opacity: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 0.45 : 1,
+                  cursor: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 'not-allowed' : 'pointer'
                 }}
                 title={isPaid ? 'Already approved and settled' : 'Managerial sign-off and approval'}
               >
@@ -559,8 +604,9 @@ export default function PayrollPage() {
               {!isPaid && (
                 <button
                   onClick={handleMarkPaid}
+                  disabled={isCalculating}
                   className="btn btn-emerald btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
                   title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
                 >
                   <IndianRupee size={14} /> Mark Paid & Dispatch
@@ -569,8 +615,9 @@ export default function PayrollPage() {
 
               <button
                 onClick={handleSendPayslips}
+                disabled={isCalculating}
                 className="btn btn-secondary btn-sm"
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6366f1', borderColor: '#c7d2fe' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6366f1', borderColor: '#c7d2fe', whiteSpace: 'nowrap' }}
                 title="Bulk email payslips to all employees"
               >
                 <Send size={14} /> Send Payslips
@@ -580,8 +627,9 @@ export default function PayrollPage() {
               {isPaid && (
                 <button
                   onClick={handleResetToDraft}
+                  disabled={isCalculating}
                   className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#b45309', borderColor: '#fed7aa', backgroundColor: '#fffbeb' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#b45309', borderColor: '#fed7aa', backgroundColor: '#fffbeb', whiteSpace: 'nowrap' }}
                   title="Re-open this cycle to make adjustments or recalculations"
                 >
                   <RotateCcw size={14} /> Re-open Cycle
@@ -590,10 +638,10 @@ export default function PayrollPage() {
             </div>
           </div>
 
-          {/* Workflow Stepper */}
+          {/* Responsive Workflow Stepper */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
             gap: '8px',
             backgroundColor: '#f8fafc',
             padding: '10px 14px',
@@ -712,7 +760,7 @@ export default function PayrollPage() {
       {/* ========================================================================= */}
       {isWizardOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '640px', width: '100%', padding: '26px' }}>
+          <div className="modal-content" style={{ maxWidth: '640px', width: 'min(640px, 95vw)', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
@@ -981,7 +1029,7 @@ export default function PayrollPage() {
       {/* ========================================================================= */}
       {isValidationModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '540px', width: '100%', padding: '24px' }}>
+          <div className="modal-content" style={{ maxWidth: '540px', width: 'min(540px, 95vw)', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ShieldAlert size={20} color="#f59e0b" />

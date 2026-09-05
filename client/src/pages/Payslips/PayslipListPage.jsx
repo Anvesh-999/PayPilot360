@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DataTable from '../../components/Common/DataTable';
-import { Download, Eye, FileText, X, DollarSign, Printer } from 'lucide-react';
+import { Download, Eye, FileText, X, DollarSign, Printer, Filter } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function PayslipListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterEmployeeId = searchParams.get('employeeId');
+  const filterEmployeeName = searchParams.get('employeeName');
   const [payslips, setPayslips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayslip, setSelectedPayslip] = useState(null);
@@ -275,9 +279,47 @@ export default function PayslipListPage() {
         </div>
       </div>
 
+      {filterEmployeeId && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          fontSize: '0.85rem',
+          color: '#1e40af',
+          boxShadow: '0 1px 4px rgba(37,99,235,0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={16} color="#2563eb" />
+            <span>Filtering payslips for staff member: <strong>{filterEmployeeName || 'Selected Employee'}</strong></span>
+          </div>
+          <button
+            onClick={() => setSearchParams({})}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              color: '#2563eb',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <X size={13} /> Clear Filter
+          </button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
-        data={payslips}
+        data={payslips.filter(p => !filterEmployeeId || p.employeeId === filterEmployeeId || p.employee?.id === filterEmployeeId)}
         searchPlaceholder="Search payslips by employee name, code, or ref..."
       />
 

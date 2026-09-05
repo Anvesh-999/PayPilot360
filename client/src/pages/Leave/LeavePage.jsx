@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DataTable from '../../components/Common/DataTable';
 import StatCard from '../../components/Common/StatCard';
-import { CalendarCheck, Clock, CheckCircle2, XCircle, Plus, X, Layers, User, Calendar, ShieldCheck } from 'lucide-react';
+import { CalendarCheck, Clock, CheckCircle2, XCircle, Plus, X, Layers, User, Calendar, ShieldCheck, Filter } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LeavePage() {
   const { user, hasRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterEmployeeId = searchParams.get('employeeId');
+  const filterEmployeeName = searchParams.get('employeeName');
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'allocations' | 'types'
   const [requests, setRequests] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
@@ -453,10 +457,48 @@ export default function LeavePage() {
       </div>
 
       {/* Main Table for Active Tab */}
+      {filterEmployeeId && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          fontSize: '0.85rem',
+          color: '#1e40af',
+          boxShadow: '0 1px 4px rgba(37,99,235,0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={16} color="#2563eb" />
+            <span>Filtering leave records for staff member: <strong>{filterEmployeeName || 'Selected Employee'}</strong></span>
+          </div>
+          <button
+            onClick={() => setSearchParams({})}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              color: '#2563eb',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <X size={13} /> Clear Filter
+          </button>
+        </div>
+      )}
+
       {activeTab === 'requests' && (
         <DataTable
           columns={requestColumns}
-          data={requests}
+          data={requests.filter(r => !filterEmployeeId || r.employeeId === filterEmployeeId || r.employee?.id === filterEmployeeId)}
           loading={loading}
           searchPlaceholder="Search leave requests..."
         />
@@ -465,7 +507,7 @@ export default function LeavePage() {
       {activeTab === 'allocations' && (
         <DataTable
           columns={allocationColumns}
-          data={balances}
+          data={balances.filter(b => !filterEmployeeId || b.employeeId === filterEmployeeId || b.employee?.id === filterEmployeeId)}
           loading={loading}
           searchPlaceholder="Search employee leave allocations..."
         />
