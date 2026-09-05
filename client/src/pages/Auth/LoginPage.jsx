@@ -9,18 +9,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('Password@123');
   const [loading, setLoading] = useState(false);
   
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state?.from?.pathname && location.state.from.pathname !== '/login')
-    ? location.state.from.pathname
-    : '/dashboard';
+
+  const getDestination = (role) => {
+    const attempted = location.state?.from?.pathname;
+    if (attempted && attempted !== '/login') {
+      const adminOnlyRoutes = ['/payroll', '/contracts', '/salary-structures'];
+      if (role === 'EMPLOYEE' && adminOnlyRoutes.some(r => attempted.startsWith(r))) {
+        return '/portal';
+      }
+      return attempted;
+    }
+    return role === 'EMPLOYEE' ? '/portal' : '/dashboard';
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate(from, { replace: true });
+      navigate(getDestination(user?.role), { replace: true });
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, user?.role, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +42,7 @@ export default function LoginPage() {
     try {
       const userData = await login(email, password);
       toast.success('Signed in successfully');
-      const target = userData?.role === 'EMPLOYEE' ? '/portal' : (location.state?.from?.pathname || '/dashboard');
+      const target = getDestination(userData?.role);
       navigate(target, { replace: true });
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Invalid email or password');

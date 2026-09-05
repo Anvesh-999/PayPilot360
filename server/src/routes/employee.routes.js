@@ -9,7 +9,7 @@ const { employeeCreateSchema, employeeUpdateSchema, employeeQuerySchema } = requ
 // All routes require authentication
 router.use(authenticateJWT);
 
-// List employees
+// List employees (Staff Directory - HR & Payroll roles only)
 router.get(
   '/',
   authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
@@ -32,7 +32,7 @@ router.get(
   employeeController.getById
 );
 
-// Get employee summary (smart button counts)
+// Get employee summary (smart button counts - HR & Payroll only)
 router.get(
   '/:id/summary',
   authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER']),

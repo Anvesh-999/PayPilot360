@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProtectedRoute({ allowedRoles }) {
@@ -36,6 +36,9 @@ export default function ProtectedRoute({ allowedRoles }) {
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+    if (user?.role === 'EMPLOYEE') {
+      return <Navigate to="/portal" replace />;
+    }
     return (
       <div style={{
         minHeight: '80vh',
@@ -63,9 +66,13 @@ export default function ProtectedRoute({ allowedRoles }) {
           <p style={{ color: 'var(--text-muted, #94a3b8)', marginBottom: '24px' }}>
             Your role (<span className="badge badge-warning">{user?.role}</span>) does not have permission to access this page.
           </p>
-          <a href="/dashboard" className="btn btn-primary">
-            Return to Dashboard
-          </a>
+          <Link
+            to={user?.role === 'EMPLOYEE' ? '/portal' : '/dashboard'}
+            className="btn btn-primary"
+            style={{ textDecoration: 'none' }}
+          >
+            {user?.role === 'EMPLOYEE' ? 'Return to Staff Portal' : 'Return to Dashboard'}
+          </Link>
         </div>
       </div>
     );

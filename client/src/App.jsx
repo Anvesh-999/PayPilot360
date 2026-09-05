@@ -33,7 +33,7 @@ export default function App() {
               <Route path="/payslips" element={<PayslipListPage />} />
               <Route path="/portal" element={<EmployeePortalPage />} />
 
-              {/* Employee Directory Routes */}
+              {/* Employee Directory Routes - Staff listing is restricted to HR & Admins */}
               <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']} />}>
                 <Route path="/employees" element={<EmployeeListPage />} />
               </Route>

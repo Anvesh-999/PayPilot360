@@ -17,6 +17,7 @@ const payrollRoutes = require('./routes/payroll.routes');
 const payslipRoutes = require('./routes/payslip.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const generalRoutes = require('./routes/general.routes');
+const aiRoutes = require('./routes/ai.routes');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use('/api/salary', salaryRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/payslips', payslipRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api', generalRoutes); // departments, positions, schedules, notifications, audit
 
 // 404 handler

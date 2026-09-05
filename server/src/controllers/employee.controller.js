@@ -1,3 +1,4 @@
+const prisma = require('../config/db');
 const employeeService = require('../services/employee.service');
 const { capturePreviousValue } = require('../middleware/audit');
 
@@ -21,6 +22,22 @@ const list = async (req, res, next) => {
 
 const getById = async (req, res, next) => {
   try {
+    // If user is an employee, they can only view their own profile
+    if (req.user.roleName === 'EMPLOYEE') {
+      let selfEmpId = req.user.employeeId;
+      if (!selfEmpId && req.user.userId) {
+        const selfEmp = await prisma.employee.findFirst({
+          where: { OR: [{ userId: req.user.userId }, { email: req.user.email }] }
+        });
+        selfEmpId = selfEmp?.id;
+      }
+      if (selfEmpId && selfEmpId !== req.params.id) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Employees can only view their own profile' }
+        });
+      }
+    }
     const employee = await employeeService.getById(req.params.id);
     res.json({ success: true, data: employee });
   } catch (error) {

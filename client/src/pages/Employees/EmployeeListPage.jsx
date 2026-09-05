@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import DataTable from '../../components/Common/DataTable';
 import {
   Plus, User, Mail, Building, Briefcase, Eye, CheckCircle2, X, Search, Filter, Phone, Calendar,
@@ -31,7 +31,11 @@ function getAvatarGradient(name = '') {
 
 export default function EmployeeListPage() {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
+
+  if (user?.role === 'EMPLOYEE') {
+    return <Navigate to="/portal" replace />;
+  }
   const canManage = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
   const canDelete = hasRole(['SUPER_ADMIN']);
   const [employees, setEmployees] = useState([]);

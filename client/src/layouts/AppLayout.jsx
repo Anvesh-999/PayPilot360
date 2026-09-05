@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/Layout/Sidebar';
 import Navbar from '../components/Layout/Navbar';
+import AICopilotDrawer from '../components/AI/AICopilotDrawer';
 import { Toaster } from 'react-hot-toast';
 
 export default function AppLayout() {
@@ -45,6 +46,9 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Global AI Copilot Slide-over Assistant */}
+      <AICopilotDrawer />
     </div>
   );
 }

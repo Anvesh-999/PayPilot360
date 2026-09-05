@@ -24,7 +24,8 @@ import {
   CreditCard,
   Mail,
   FileText,
-  RotateCcw
+  RotateCcw,
+  Copy
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -67,12 +68,53 @@ export default function PayrollPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // AI Smart Audit & Executive Briefing State
+  const [auditData, setAuditData] = useState(null);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [isExecutiveModalOpen, setIsExecutiveModalOpen] = useState(false);
+  const [executiveMemo, setExecutiveMemo] = useState(null);
+  const [loadingMemo, setLoadingMemo] = useState(false);
+
+  const runAIAudit = async (id) => {
+    const targetId = id || activePayrun?.id;
+    if (!targetId) return;
+    setLoadingAudit(true);
+    try {
+      const { data } = await api.get(`/ai/payroll-anomalies/${targetId}`);
+      if (data?.success) {
+        setAuditData(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load AI payroll anomalies:', err);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const handleGenerateExecutiveMemo = async () => {
+    if (!activePayrun?.id) return;
+    setLoadingMemo(true);
+    setIsExecutiveModalOpen(true);
+    try {
+      const { data } = await api.get(`/ai/executive-summary/${activePayrun.id}`);
+      if (data?.success) {
+        setExecutiveMemo(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to generate executive summary:', err);
+      toast.error('Failed to generate executive memo');
+    } finally {
+      setLoadingMemo(false);
+    }
+  };
+
   const fetchActivePayrunDetail = async (id) => {
     if (!id) return;
     try {
       const res = await api.get(`/payroll/payruns/${id}`);
       if (res.data?.data) {
         setActivePayrun(res.data.data);
+        runAIAudit(id);
       }
     } catch (err) {
       console.error('Failed to load payrun details:', err);
@@ -716,6 +758,227 @@ export default function PayrollPage() {
         </div>
       )}
 
+      {/* AI Smart Audit & Risk Assessment Card */}
+      {activePayrun && (
+        <div
+          className="card"
+          style={{
+            padding: '22px 24px',
+            borderRadius: '16px',
+            border: '1px solid var(--border-color)',
+            background: 'linear-gradient(135deg, #ffffff 0%, #f6f5fb 40%, #f0f0ff 100%)',
+            boxShadow: 'var(--shadow-sm)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #5554aa 0%, #7e7dcb 100%)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(85, 84, 170, 0.25)'
+              }}>
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    AI Smart Audit & Risk Assessment
+                  </h3>
+                  <span className="badge badge-innowise" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
+                    PROACTIVE GUARD
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  Algorithmic detection of wage spikes, ghost worker attendance mismatch, and duplicate bank coordinates
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => runAIAudit(activePayrun.id)}
+                disabled={loadingAudit}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '10px' }}
+                title="Rerun algorithmic anomaly scanner on active batch"
+              >
+                <Sparkles size={14} className={loadingAudit ? 'spin-animation' : ''} />
+                <span>{loadingAudit ? 'Auditing...' : 'Run Smart Audit'}</span>
+              </button>
+
+              <button
+                onClick={handleGenerateExecutiveMemo}
+                disabled={loadingMemo}
+                className="btn btn-primary btn-sm"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '10px' }}
+                title="Generate C-Suite leadership briefing memo"
+              >
+                <FileText size={14} />
+                <span>{loadingMemo ? 'Generating...' : 'Generate Executive Memo'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Audit Metrics Dashboard */}
+          {auditData ? (
+            <div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '14px',
+                marginBottom: '16px'
+              }}>
+                {/* Health Score Meter */}
+                <div style={{
+                  padding: '14px 18px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Cycle Health Score
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                    <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a' }}>
+                      {auditData.healthScore}%
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        backgroundColor: auditData.riskLevel === 'LOW' ? '#dcfce7' : auditData.riskLevel === 'MEDIUM' ? '#fef3c7' : '#fee2e2',
+                        color: auditData.riskLevel === 'LOW' ? '#15803d' : auditData.riskLevel === 'MEDIUM' ? '#b45309' : '#b91c1c',
+                        border: `1px solid ${auditData.riskLevel === 'LOW' ? '#bbf7d0' : auditData.riskLevel === 'MEDIUM' ? '#fde68a' : '#fecaca'}`
+                      }}
+                    >
+                      {auditData.riskLevel} RISK
+                    </span>
+                  </div>
+                  <div style={{ height: '6px', width: '100%', backgroundColor: '#f0eef6', borderRadius: '999px', overflow: 'hidden', marginTop: '10px' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${auditData.healthScore}%`,
+                      backgroundColor: auditData.riskLevel === 'LOW' ? '#10b981' : auditData.riskLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444',
+                      borderRadius: '999px',
+                      transition: 'width 0.4s ease'
+                    }} />
+                  </div>
+                </div>
+
+                {/* Flagged Anomalies Count */}
+                <div style={{
+                  padding: '14px 18px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Flagged Discrepancies
+                  </span>
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: auditData.anomaliesCount > 0 ? '#b45309' : '#15803d', marginTop: '6px' }}>
+                    {auditData.anomaliesCount} {auditData.anomaliesCount === 1 ? 'Outlier' : 'Outliers'}
+                  </div>
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', display: 'block', marginTop: '6px' }}>
+                    {auditData.highRiskCount > 0 ? `${auditData.highRiskCount} High Risk Flags` : 'Zero High Risk Flags'}
+                  </span>
+                </div>
+
+                {/* AI Recommendation Box */}
+                <div style={{
+                  padding: '14px 18px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)',
+                  gridColumn: 'span 2'
+                }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Auditor Recommendation
+                  </span>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '0.82rem', color: '#334155', fontWeight: 500, lineHeight: 1.45 }}>
+                    {auditData.recommendations[0] || 'Batch aligns within normal financial variance thresholds. Safe for disbursement.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Anomaly Details Cards if any */}
+              {auditData.anomalies.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {auditData.anomalies.map((anom, aIdx) => (
+                    <div
+                      key={aIdx}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '10px',
+                        backgroundColor: '#ffffff',
+                        border: `1px solid ${anom.severity === 'HIGH' ? '#fecaca' : anom.severity === 'MEDIUM' ? '#fed7aa' : '#e5e3ec'}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        fontSize: '0.82rem'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          fontSize: '0.66rem',
+                          fontWeight: 700,
+                          backgroundColor: anom.severity === 'HIGH' ? '#fee2e2' : anom.severity === 'MEDIUM' ? '#ffedd5' : '#f1f5f9',
+                          color: anom.severity === 'HIGH' ? '#b91c1c' : anom.severity === 'MEDIUM' ? '#c2410c' : '#475569'
+                        }}>
+                          {anom.severity}
+                        </span>
+                        <div>
+                          <strong>{anom.employeeName}</strong> <span style={{ color: '#64748b' }}>({anom.department})</span>: {anom.description}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'nowrap', fontStyle: 'italic' }}>
+                        {anom.actionRequired}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  backgroundColor: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  color: '#15803d',
+                  fontSize: '0.82rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle2 size={16} color="#16a34a" />
+                  <span>
+                    <strong>All Compliance Guards Passed:</strong> Zero duplicate bank accounts, negative net salaries, or ghost employee attendance mismatches detected.
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '0.84rem' }}>
+              Click <strong>Run Smart Audit</strong> to execute automated anomaly scanning across this payrun.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Aggregation Summary Cards */}
       {activePayrun && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
@@ -1078,6 +1341,110 @@ export default function PayrollPage() {
               >
                 Close Audit
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* C-SUITE EXECUTIVE BRIEFING MEMO MODAL (AI Generated) */}
+      {/* ========================================================================= */}
+      {isExecutiveModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '680px', width: 'min(680px, 95vw)', maxHeight: '90vh', overflowY: 'auto', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #5554aa 0%, #7e7dcb 100%)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Executive Payroll Briefing Memo
+                  </h2>
+                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                    Automated Leadership Sign-off Report for {activePayrun?.name}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsExecutiveModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {loadingMemo ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  border: '3px solid var(--primary-light)',
+                  borderTopColor: 'var(--primary)',
+                  animation: 'spin 1s linear infinite',
+                  margin: '0 auto 12px auto'
+                }} />
+                <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>
+                  Generating C-Suite briefing memo and auditing metrics...
+                </span>
+              </div>
+            ) : executiveMemo ? (
+              <div style={{
+                backgroundColor: '#faf9fd',
+                borderRadius: '12px',
+                border: '1px solid var(--border-color)',
+                padding: '20px',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                fontSize: '0.86rem',
+                lineHeight: 1.6,
+                color: '#1e293b',
+                whiteSpace: 'pre-wrap',
+                maxHeight: '55vh',
+                overflowY: 'auto'
+              }}>
+                {executiveMemo.summaryMarkdown}
+              </div>
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                No memo data available.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+              <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                Audit Engine: <strong>PeoplePay360 AI Guardian</strong>
+              </span>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {executiveMemo && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(executiveMemo.summaryMarkdown);
+                      toast.success('Executive Memo copied to clipboard!');
+                    }}
+                    className="btn btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Copy size={15} /> Copy to Clipboard
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsExecutiveModalOpen(false)}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
