@@ -43,7 +43,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ─── Routes ─────────────────────────────────────────────
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
+});
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -55,11 +58,6 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/payslips', payslipRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api', generalRoutes); // departments, positions, schedules, notifications, audit
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
-});
 
 // 404 handler
 app.use((req, res) => {

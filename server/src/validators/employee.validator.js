@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-const employeeCreateSchema = z.object({
+const employeeBaseSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email('Invalid email format'),
@@ -19,12 +19,14 @@ const employeeCreateSchema = z.object({
   dateOfBirth: z.coerce.date().optional().nullable(),
   gender: z.string().optional().nullable(),
   address: z.string().max(500).optional().nullable(),
-}).refine(
+});
+
+const employeeCreateSchema = employeeBaseSchema.refine(
   (data) => !data.managerId || data.managerId !== data.id,
   { message: 'Manager cannot be self', path: ['managerId'] }
 );
 
-const employeeUpdateSchema = employeeCreateSchema.partial();
+const employeeUpdateSchema = employeeBaseSchema.partial();
 
 const employeeQuerySchema = z.object({
   search: z.string().optional(),

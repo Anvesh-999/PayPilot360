@@ -1,6 +1,6 @@
 const { z } = require('zod');
 
-const contractCreateSchema = z.object({
+const contractBaseSchema = z.object({
   employeeId: z.string().uuid(),
   startDate: z.coerce.date(),
   endDate: z.coerce.date().optional().nullable(),
@@ -11,12 +11,14 @@ const contractCreateSchema = z.object({
   workingScheduleId: z.string().uuid().optional().nullable(),
   salaryStructureId: z.string().uuid().optional().nullable(),
   status: z.enum(['DRAFT', 'ACTIVE', 'EXPIRED', 'CANCELLED']).default('DRAFT'),
-}).refine(
+});
+
+const contractCreateSchema = contractBaseSchema.refine(
   (data) => !data.endDate || data.endDate > data.startDate,
   { message: 'End date must be after start date', path: ['endDate'] }
 );
 
-const contractUpdateSchema = contractCreateSchema.partial().omit({ employeeId: true });
+const contractUpdateSchema = contractBaseSchema.partial().omit({ employeeId: true });
 
 // ─── Leave validators ──────────────────────────────────
 
