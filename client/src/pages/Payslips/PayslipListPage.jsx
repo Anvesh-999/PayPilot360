@@ -121,18 +121,18 @@ export default function PayslipListPage() {
       key: 'grossPay',
       label: 'Gross Pay',
       sortable: true,
-      render: (val) => <span style={{ color: '#14b8a6', fontWeight: 600 }}>${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#14b8a6', fontWeight: 600 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'totalDeductions',
       label: 'Deductions',
-      render: (val) => <span style={{ color: '#ef4444' }}>-${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#ef4444' }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'netPay',
       label: 'Net Pay',
       sortable: true,
-      render: (val) => <span style={{ color: '#10b981', fontWeight: 700 }}>${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#10b981', fontWeight: 700 }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'actions',
@@ -271,19 +271,19 @@ export default function PayslipListPage() {
                   <div style={{ fontWeight: 700, color: '#065f46', marginBottom: '10px', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.04em' }}>Earnings</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>Basic Salary</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.basic?.toLocaleString()}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.basic?.toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>House Rent (HRA)</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.hra?.toLocaleString()}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.hra?.toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>Allowances</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.allowances?.toLocaleString()}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.allowances?.toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ borderTop: '1px solid #a7f3d0', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                     <span style={{ color: '#065f46' }}>Gross Earnings</span>
-                    <span style={{ color: '#059669' }}>${selectedPayslip.grossPay?.toLocaleString()}</span>
+                    <span style={{ color: '#059669' }}>₹{selectedPayslip.grossPay?.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -292,19 +292,19 @@ export default function PayslipListPage() {
                   <div style={{ fontWeight: 700, color: '#9f1239', marginBottom: '10px', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.04em' }}>Deductions</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>Provident Fund (PF)</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.pf?.toLocaleString()}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.pf?.toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>Income Tax (TDS)</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.tax?.toLocaleString()}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.tax?.toLocaleString('en-IN')}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <span style={{ color: '#334155' }}>Loss of Pay (LOP)</span>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>${selectedPayslip.lopDeduction?.toLocaleString() || '0.00'}</span>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>₹{selectedPayslip.lopDeduction?.toLocaleString('en-IN') || '0.00'}</span>
                   </div>
                   <div style={{ borderTop: '1px solid #fecdd3', paddingTop: '8px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
                     <span style={{ color: '#9f1239' }}>Total Deductions</span>
-                    <span style={{ color: '#e11d48' }}>-${selectedPayslip.totalDeductions?.toLocaleString()}</span>
+                    <span style={{ color: '#e11d48' }}>-₹{selectedPayslip.totalDeductions?.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -326,7 +326,7 @@ export default function PayslipListPage() {
                   <div style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 500 }}>Transferred directly via Corporate ACH</div>
                 </div>
                 <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-                  ${selectedPayslip.netPay?.toLocaleString()}
+                  ₹{selectedPayslip.netPay?.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>

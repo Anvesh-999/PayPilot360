@@ -323,7 +323,7 @@ export default function SalaryStructurePage() {
 
             {sandboxResult !== null ? (
               <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#059669', marginTop: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                ${Number(sandboxResult).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₹{Number(sandboxResult).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             ) : sandboxError ? (
               <div style={{ color: '#e11d48', marginTop: '12px', fontSize: '0.9rem', fontWeight: 500 }}>

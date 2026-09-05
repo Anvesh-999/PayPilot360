@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import StatCard from '../../components/Common/StatCard';
 import {
   Users,
-  DollarSign,
+  IndianRupee,
   CalendarCheck,
   Clock,
   TrendingUp,
@@ -85,9 +85,9 @@ export default function DashboardPage() {
   ];
 
   const recentPayruns = [
-    { id: 'PR-2026-03', name: 'March 2026 Regular Cycle', period: 'Mar 1 - Mar 31, 2026', total: '$396,800.00', status: 'DRAFT', employees: 10 },
-    { id: 'PR-2026-02', name: 'February 2026 Regular Cycle', period: 'Feb 1 - Feb 28, 2026', total: '$390,000.00', status: 'PAID', employees: 10 },
-    { id: 'PR-2026-01', name: 'January 2026 Regular Cycle', period: 'Jan 1 - Jan 31, 2026', total: '$382,000.00', status: 'PAID', employees: 9 },
+    { id: 'PR-2026-03', name: 'March 2026 Regular Cycle', period: 'Mar 1 - Mar 31, 2026', total: '₹3,96,800.00', status: 'DRAFT', employees: 10 },
+    { id: 'PR-2026-02', name: 'February 2026 Regular Cycle', period: 'Feb 1 - Feb 28, 2026', total: '₹3,90,000.00', status: 'PAID', employees: 10 },
+    { id: 'PR-2026-01', name: 'January 2026 Regular Cycle', period: 'Jan 1 - Jan 31, 2026', total: '₹3,82,000.00', status: 'PAID', employees: 9 },
   ];
 
   const isPayroll = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
@@ -160,10 +160,10 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Monthly Payroll Cost"
-          value={`$${stats.totalMonthlyPayroll.toLocaleString()}`}
+          value={`₹${stats.totalMonthlyPayroll.toLocaleString('en-IN')}`}
           description="Projected gross wages + allowances"
           color="#059669"
-          icon={DollarSign}
+          icon={IndianRupee}
           badgeText="+1.7% vs Feb"
           badgePositive={true}
         />
@@ -217,9 +217,9 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} tickFormatter={(v) => `₹${v / 1000}k`} />
                 <Tooltip
-                  formatter={(val) => [`$${val.toLocaleString()}`, '']}
+                  formatter={(val) => [`₹${val.toLocaleString('en-IN')}`, '']}
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: '12px' }}
                 />
                 <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />

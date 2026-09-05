@@ -146,7 +146,7 @@ export default function EmployeePortalPage() {
         />
         <StatCard
           title="Latest Net Payout"
-          value={latestPayslip ? `$${parseFloat(latestPayslip.netSalary).toLocaleString()}` : '$35,100.00'}
+          value={latestPayslip ? `₹${parseFloat(latestPayslip.netSalary).toLocaleString('en-IN')}` : '₹35,100.00'}
           description={latestPayslip?.payrun?.name || 'Disbursed for Feb 2026'}
           color="#6366f1"
           icon={ShieldCheck}
@@ -216,13 +216,13 @@ export default function EmployeePortalPage() {
                       {ps.payrun?.name || `Cycle ${new Date(ps.createdAt).toLocaleDateString()}`}
                     </td>
                     <td style={{ padding: '14px 20px', color: '#4f46e5', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                      ${parseFloat(ps.grossSalary).toLocaleString()}
+                      ₹{parseFloat(ps.grossSalary).toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '14px 20px', color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-                      -${parseFloat(ps.totalDeductions).toLocaleString()}
+                      -₹{parseFloat(ps.totalDeductions).toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-                      ${parseFloat(ps.netSalary).toLocaleString()}
+                      ₹{parseFloat(ps.netSalary).toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '14px 20px' }}>
                       <span className="badge badge-success">✓ {ps.status}</span>
@@ -242,9 +242,9 @@ export default function EmployeePortalPage() {
                 defaultPayslips.map((ps) => (
                   <tr key={ps.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.88rem' }} className="table-row-hover">
                     <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0f172a' }}>{ps.month}</td>
-                    <td style={{ padding: '14px 20px', color: '#4f46e5', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>${ps.gross.toLocaleString()}</td>
-                    <td style={{ padding: '14px 20px', color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>-${ps.deductions.toLocaleString()}</td>
-                    <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>${ps.net.toLocaleString()}</td>
+                    <td style={{ padding: '14px 20px', color: '#4f46e5', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>₹{ps.gross.toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '14px 20px', color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>-₹{ps.deductions.toLocaleString('en-IN')}</td>
+                    <td style={{ padding: '14px 20px', fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>₹{ps.net.toLocaleString('en-IN')}</td>
                     <td style={{ padding: '14px 20px' }}>
                       <span className="badge badge-success">✓ {ps.status}</span>
                     </td>

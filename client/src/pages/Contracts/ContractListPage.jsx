@@ -110,7 +110,7 @@ export default function ContractListPage() {
       sortable: true,
       render: (val, row) => (
         <span style={{ fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
-          ${parseFloat(row.basicWage || val || 0).toLocaleString()} / {(row.wageType || 'MONTHLY').toLowerCase()}
+          ₹{parseFloat(row.basicWage || val || 0).toLocaleString('en-IN')} / {(row.wageType || 'MONTHLY').toLowerCase()}
         </span>
       )
     },
@@ -240,7 +240,7 @@ export default function ContractListPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Base Wage ($) *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Base Wage (₹) *</label>
                   <input
                     type="number"
                     step="0.01"

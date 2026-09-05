@@ -9,7 +9,7 @@ import {
   FileCheck,
   Plus,
   Clock,
-  DollarSign,
+  IndianRupee,
   ChevronRight,
   ShieldAlert,
   Download,
@@ -139,24 +139,24 @@ export default function PayrollPage() {
     {
       key: 'basic',
       label: 'Basic Pay',
-      render: (val) => <span style={{ fontVariantNumeric: 'tabular-nums', color: '#334155' }}>${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ fontVariantNumeric: 'tabular-nums', color: '#334155' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'grossPay',
       label: 'Gross Salary',
       sortable: true,
-      render: (val) => <span style={{ color: '#4f46e5', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#4f46e5', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'totalDeductions',
       label: 'Deductions (Tax + LOP)',
-      render: (val) => <span style={{ color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>-${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#e11d48', fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>-₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'netPay',
       label: 'Net Payout',
       sortable: true,
-      render: (val) => <span style={{ color: '#059669', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>${parseFloat(val || 0).toLocaleString()}</span>
+      render: (val) => <span style={{ color: '#059669', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>₹{parseFloat(val || 0).toLocaleString('en-IN')}</span>
     },
     {
       key: 'status',
@@ -318,21 +318,21 @@ export default function PayrollPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           <StatCard
             title="Gross Salary Base"
-            value={`$${(activePayrun.totalGross || 396800).toLocaleString()}`}
+            value={`₹${(activePayrun.totalGross || 396800).toLocaleString('en-IN')}`}
             color="#6366f1"
-            icon={DollarSign}
+            icon={IndianRupee}
             badgeText="Pre-tax"
           />
           <StatCard
             title="Deductions & Penalties"
-            value={`$${(activePayrun.totalDeductions || 39680).toLocaleString()}`}
+            value={`₹${(activePayrun.totalDeductions || 39680).toLocaleString('en-IN')}`}
             color="#f43f5e"
             icon={ShieldAlert}
             badgeText="Statutory"
           />
           <StatCard
             title="Net Disbursed Funds"
-            value={`$${(activePayrun.totalNet || 357120).toLocaleString()}`}
+            value={`₹${(activePayrun.totalNet || 357120).toLocaleString('en-IN')}`}
             color="#10b981"
             icon={CheckCircle2}
             badgeText="Net Payout"
