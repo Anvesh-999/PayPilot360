@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Curated avatar gradient palette for realistic human feel
 const AVATAR_GRADIENTS = [
@@ -30,6 +31,9 @@ function getAvatarGradient(name = '') {
 
 export default function EmployeeListPage() {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  const canManage = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
+  const canDelete = hasRole(['SUPER_ADMIN']);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'kanban'
@@ -39,6 +43,7 @@ export default function EmployeeListPage() {
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
+  const [schedules, setSchedules] = useState([]);
 
   // Edit employee state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -49,6 +54,8 @@ export default function EmployeeListPage() {
     phone: '',
     departmentId: '',
     jobPositionId: '',
+    managerId: '',
+    workingScheduleId: '',
     employmentStatus: 'ACTIVE',
   });
 
@@ -59,6 +66,8 @@ export default function EmployeeListPage() {
     phone: '',
     departmentId: '',
     jobPositionId: '',
+    managerId: '',
+    workingScheduleId: '',
     joiningDate: new Date().toISOString().split('T')[0],
     status: 'ACTIVE',
   });
@@ -78,14 +87,17 @@ export default function EmployeeListPage() {
 
   const fetchMeta = async () => {
     try {
-      const [deptRes, posRes] = await Promise.all([
+      const [deptRes, posRes, schedRes] = await Promise.allSettled([
         api.get('/departments'),
-        api.get('/job-positions')
+        api.get('/job-positions'),
+        api.get('/working-schedules')
       ]);
-      const depts = Array.isArray(deptRes.data.data) ? deptRes.data.data : (deptRes.data.data?.items || []);
-      const poses = Array.isArray(posRes.data.data) ? posRes.data.data : (posRes.data.data?.items || []);
+      const depts = deptRes.status === 'fulfilled' ? (Array.isArray(deptRes.value.data.data) ? deptRes.value.data.data : (deptRes.value.data.data?.items || [])) : [];
+      const poses = posRes.status === 'fulfilled' ? (Array.isArray(posRes.value.data.data) ? posRes.value.data.data : (posRes.value.data.data?.items || [])) : [];
+      const scheds = schedRes.status === 'fulfilled' ? (Array.isArray(schedRes.value.data.data) ? schedRes.value.data.data : (schedRes.value.data.data?.items || [])) : [];
       setDepartments(depts);
       setPositions(poses);
+      setSchedules(scheds);
     } catch (e) {
       // Fallback
     }
@@ -96,6 +108,19 @@ export default function EmployeeListPage() {
     fetchMeta();
   }, []);
 
+  const handleInspect = async (emp) => {
+    setSelectedEmployee(emp);
+    setIsDetailOpen(true);
+    try {
+      const { data } = await api.get(`/employees/${emp.id}`);
+      if (data.data) {
+        setSelectedEmployee(data.data);
+      }
+    } catch (e) {
+      // Keep existing
+    }
+  };
+
   const handleCreateEmployee = async (e) => {
     e.preventDefault();
     try {
@@ -104,6 +129,8 @@ export default function EmployeeListPage() {
         phone: formData.phone || null,
         departmentId: formData.departmentId || null,
         jobPositionId: formData.jobPositionId || null,
+        managerId: formData.managerId || null,
+        workingScheduleId: formData.workingScheduleId || null,
       };
       await api.post('/employees', payload);
       toast.success('Employee onboarded successfully');
@@ -115,6 +142,8 @@ export default function EmployeeListPage() {
         phone: '',
         departmentId: '',
         jobPositionId: '',
+        managerId: '',
+        workingScheduleId: '',
         joiningDate: new Date().toISOString().split('T')[0],
         status: 'ACTIVE',
       });
@@ -132,6 +161,8 @@ export default function EmployeeListPage() {
       phone: emp.phone || '',
       departmentId: emp.departmentId || emp.department?.id || '',
       jobPositionId: emp.jobPositionId || emp.jobPosition?.id || '',
+      managerId: emp.managerId || emp.manager?.id || '',
+      workingScheduleId: emp.workingScheduleId || emp.workingSchedule?.id || '',
       employmentStatus: emp.employmentStatus || emp.status || 'ACTIVE',
     });
     setIsEditModalOpen(true);
@@ -146,6 +177,8 @@ export default function EmployeeListPage() {
         phone: editFormData.phone || null,
         departmentId: editFormData.departmentId || null,
         jobPositionId: editFormData.jobPositionId || null,
+        managerId: editFormData.managerId || null,
+        workingScheduleId: editFormData.workingScheduleId || null,
         employmentStatus: editFormData.employmentStatus,
       };
       await api.put(`/employees/${editingEmployee.id}`, payload);
@@ -326,29 +359,33 @@ export default function EmployeeListPage() {
       render: (_, row) => (
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
-            onClick={() => { setSelectedEmployee(row); setIsDetailOpen(true); }}
+            onClick={() => handleInspect(row)}
             className="btn btn-secondary btn-sm"
             style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             title="Inspect profile"
           >
             <Eye size={13} /> View
           </button>
-          <button
-            onClick={() => handleEditClick(row)}
-            className="btn btn-secondary btn-sm"
-            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#4f46e5' }}
-            title="Edit employee details"
-          >
-            <Edit2 size={13} /> Edit
-          </button>
-          <button
-            onClick={() => handleDeleteEmployee(row)}
-            className="btn btn-secondary btn-sm"
-            style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#e11d48' }}
-            title="Terminate employee"
-          >
-            <Trash2 size={13} /> Delete
-          </button>
+          {canManage && (
+            <button
+              onClick={() => handleEditClick(row)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#4f46e5' }}
+              title="Edit employee details"
+            >
+              <Edit2 size={13} /> Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => handleDeleteEmployee(row)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '5px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#e11d48' }}
+              title="Terminate employee"
+            >
+              <Trash2 size={13} /> Delete
+            </button>
+          )}
         </div>
       )
     }
@@ -382,14 +419,16 @@ export default function EmployeeListPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="btn btn-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          <Plus size={16} />
-          <span>Onboard Employee</span>
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Plus size={16} />
+            <span>Onboard Employee</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and View Toggle Bar */}
@@ -618,29 +657,33 @@ export default function EmployeeListPage() {
                           <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>● {emp.employmentStatus || emp.status || 'ACTIVE'}</span>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button
-                              onClick={() => { setSelectedEmployee(emp); setIsDetailOpen(true); }}
+                              onClick={() => handleInspect(emp)}
                               className="btn btn-secondary btn-sm"
                               style={{ padding: '4px 8px' }}
                               title="Inspect Form & History"
                             >
                               <Eye size={13} />
                             </button>
-                            <button
-                              onClick={() => handleEditClick(emp)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px', color: '#4f46e5' }}
-                              title="Edit Employee Details"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteEmployee(emp)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px', color: '#e11d48' }}
-                              title="Terminate / Delete Employee"
-                            >
-                              <Trash2 size={13} />
-                            </button>
+                            {canManage && (
+                              <button
+                                onClick={() => handleEditClick(emp)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 8px', color: '#4f46e5' }}
+                                title="Edit Employee Details"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                            )}
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteEmployee(emp)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '4px 8px', color: '#e11d48' }}
+                                title="Terminate / Delete Employee"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -744,6 +787,35 @@ export default function EmployeeListPage() {
                     <option value="">Select Position...</option>
                     {positions.map((p) => (
                       <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reporting Manager</label>
+                  <select
+                    value={formData.managerId}
+                    onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">No Manager (Direct / None)</option>
+                    {employees.slice(0, 100).map((e) => (
+                      <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeCode || e.code})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Working Schedule</label>
+                  <select
+                    value={formData.workingScheduleId}
+                    onChange={(e) => setFormData({ ...formData, workingScheduleId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Standard Schedule</option>
+                    {schedules.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.totalWeeklyHours || 40}h/wk)</option>
                     ))}
                   </select>
                 </div>
@@ -875,6 +947,35 @@ export default function EmployeeListPage() {
                 </div>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reporting Manager</label>
+                  <select
+                    value={editFormData.managerId}
+                    onChange={(e) => setEditFormData({ ...editFormData, managerId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">No Manager (Direct / None)</option>
+                    {employees.filter(e => e.id !== editingEmployee?.id).slice(0, 100).map((e) => (
+                      <option key={e.id} value={e.id}>{e.firstName} {e.lastName} ({e.employeeCode || e.code})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Working Schedule</label>
+                  <select
+                    value={editFormData.workingScheduleId}
+                    onChange={(e) => setEditFormData({ ...editFormData, workingScheduleId: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="">Standard Schedule</option>
+                    {schedules.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.totalWeeklyHours || 40}h/wk)</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Employment Status</label>
                 <select
@@ -962,7 +1063,11 @@ export default function EmployeeListPage() {
             }}>
               <button
                 type="button"
-                onClick={() => { setIsDetailOpen(false); navigate('/contracts'); }}
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  const name = `${selectedEmployee.firstName || ''} ${selectedEmployee.lastName || ''}`.trim() || selectedEmployee.employeeCode;
+                  navigate(`/contracts?employeeId=${selectedEmployee.id}&employeeName=${encodeURIComponent(name)}`);
+                }}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -978,12 +1083,18 @@ export default function EmployeeListPage() {
               >
                 <FileText size={15} color="#0284c7" />
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Contracts</span>
-                <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Active</span>
+                <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                  {selectedEmployee._count?.contracts ?? 1} Record{(selectedEmployee._count?.contracts === 1) ? '' : 's'}
+                </span>
               </button>
 
               <button
                 type="button"
-                onClick={() => { setIsDetailOpen(false); navigate('/attendance'); }}
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  const name = `${selectedEmployee.firstName || ''} ${selectedEmployee.lastName || ''}`.trim() || selectedEmployee.employeeCode;
+                  navigate(`/attendance?employeeId=${selectedEmployee.id}&employeeName=${encodeURIComponent(name)}`);
+                }}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -999,12 +1110,18 @@ export default function EmployeeListPage() {
               >
                 <Clock size={15} color="#059669" />
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Attendance</span>
-                <span className="badge badge-success" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Punches</span>
+                <span className="badge badge-success" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                  {selectedEmployee._count?.attendance ?? 0} Punches
+                </span>
               </button>
 
               <button
                 type="button"
-                onClick={() => { setIsDetailOpen(false); navigate('/leave'); }}
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  const name = `${selectedEmployee.firstName || ''} ${selectedEmployee.lastName || ''}`.trim() || selectedEmployee.employeeCode;
+                  navigate(`/leave?employeeId=${selectedEmployee.id}&employeeName=${encodeURIComponent(name)}`);
+                }}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1020,12 +1137,18 @@ export default function EmployeeListPage() {
               >
                 <CalendarCheck size={15} color="#d97706" />
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Time Off</span>
-                <span className="badge badge-warning" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>Requests</span>
+                <span className="badge badge-warning" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                  {selectedEmployee._count?.leaveRequests ?? 0} Requests
+                </span>
               </button>
 
               <button
                 type="button"
-                onClick={() => { setIsDetailOpen(false); navigate('/payslips'); }}
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  const name = `${selectedEmployee.firstName || ''} ${selectedEmployee.lastName || ''}`.trim() || selectedEmployee.employeeCode;
+                  navigate(`/payslips?employeeId=${selectedEmployee.id}&employeeName=${encodeURIComponent(name)}`);
+                }}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1041,7 +1164,9 @@ export default function EmployeeListPage() {
               >
                 <Receipt size={15} color="#7c3aed" />
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0f172a' }}>Payslips</span>
-                <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>History</span>
+                <span className="badge badge-purple" style={{ fontSize: '0.62rem', padding: '1px 6px' }}>
+                  {selectedEmployee._count?.payslips ?? 0} Slips
+                </span>
               </button>
             </div>
 
@@ -1063,6 +1188,18 @@ export default function EmployeeListPage() {
               <div>
                 <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Job Title</span>
                 <div style={{ color: '#0f172a', marginTop: '3px', fontWeight: 500 }}>{selectedEmployee.jobPosition?.title || 'Staff'}</div>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reporting Manager</span>
+                <div style={{ color: '#0f172a', marginTop: '3px', fontWeight: 600 }}>
+                  {selectedEmployee.manager ? `${selectedEmployee.manager.firstName} ${selectedEmployee.manager.lastName}` : 'Direct Executive Report'}
+                </div>
+              </div>
+              <div>
+                <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Working Schedule</span>
+                <div style={{ color: '#0f172a', marginTop: '3px', fontWeight: 600 }}>
+                  {selectedEmployee.workingSchedule?.name || 'Standard 9-to-6 Shift'}
+                </div>
               </div>
               <div>
                 <span style={{ color: '#64748b', fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Start Date</span>

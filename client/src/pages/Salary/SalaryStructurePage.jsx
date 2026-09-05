@@ -89,8 +89,8 @@ export default function SalaryStructurePage() {
       sortable: true,
       render: (val, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: '#fff' }}>{val}</div>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{row.description}</span>
+          <div style={{ fontWeight: 600, color: 'var(--text-primary, #0f172a)' }}>{val}</div>
+          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{row.description}</span>
         </div>
       )
     },
@@ -98,12 +98,28 @@ export default function SalaryStructurePage() {
       key: 'code',
       label: 'Code',
       sortable: true,
-      render: (val) => <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{val}</span>
+      render: (val) => <span style={{ fontFamily: 'monospace', color: '#4f46e5', fontWeight: 600 }}>{val}</span>
     },
     {
       key: 'rulesCount',
       label: 'Salary Rules Linked',
-      render: (val, row) => `${row.rules?.length || val || 0} Rules`
+      render: (val, row) => (
+        <span className="badge badge-purple">
+          {row.rules?.length || row._count?.rules || val || 0} Rules
+        </span>
+      )
+    },
+    {
+      key: 'assignedStaff',
+      label: 'Assigned Staff',
+      render: (val, row) => {
+        const count = row._count?.contracts ?? 0;
+        return (
+          <span className="badge badge-info" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+            <span>👥</span> {count} {count === 1 ? 'Employee' : 'Employees'}
+          </span>
+        );
+      }
     }
   ];
 

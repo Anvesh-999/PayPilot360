@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DataTable from '../../components/Common/DataTable';
-import { Plus, FileText, CheckCircle2, AlertCircle, X, Trash2, Calendar, Clock, Layers } from 'lucide-react';
+import { Plus, FileText, CheckCircle2, AlertCircle, X, Trash2, Calendar, Clock, Layers, Filter } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function ContractListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterEmployeeId = searchParams.get('employeeId');
+  const filterEmployeeName = searchParams.get('employeeName');
+
   const [activeTab, setActiveTab] = useState('contracts'); // 'contracts' | 'schedules'
   const [contracts, setContracts] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -24,16 +29,22 @@ export default function ContractListPage() {
     status: 'ACTIVE',
   });
 
-  // Schedule Modal State (A3)
+  // Schedule Modal State & 7-Day Pattern Matrix (A3)
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({
-    name: 'Standard Engineering Shift (40h)',
-    type: 'STANDARD_40H',
-    startTime: '09:00',
-    endTime: '18:00',
-    breakMinutes: 60,
-    workDays: 5,
+    name: 'Standard Working Shift (45h)',
+    type: 'STANDARD',
   });
+
+  const [patternDays, setPatternDays] = useState([
+    { dayOfWeek: 1, name: 'Monday', active: true, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+    { dayOfWeek: 2, name: 'Tuesday', active: true, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+    { dayOfWeek: 3, name: 'Wednesday', active: true, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+    { dayOfWeek: 4, name: 'Thursday', active: true, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+    { dayOfWeek: 5, name: 'Friday', active: true, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+    { dayOfWeek: 6, name: 'Saturday', active: false, startTime: '09:00', endTime: '14:00', breakMinutes: 30 },
+    { dayOfWeek: 7, name: 'Sunday', active: false, startTime: '09:00', endTime: '18:00', breakMinutes: 60 },
+  ]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -108,22 +119,24 @@ export default function ContractListPage() {
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
     try {
-      // Build 5-day schedule pattern
-      const days = [];
-      const dayNames = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
-      for (let i = 0; i < Math.min(scheduleForm.workDays, 7); i++) {
-        days.push({
-          dayOfWeek: dayNames[i] || 'SATURDAY',
-          startTime: scheduleForm.startTime,
-          endTime: scheduleForm.endTime,
-          breakMinutes: parseInt(scheduleForm.breakMinutes) || 0
-        });
+      const activeDays = patternDays
+        .filter(d => d.active)
+        .map(d => ({
+          dayOfWeek: d.dayOfWeek,
+          startTime: d.startTime,
+          endTime: d.endTime,
+          breakMinutes: parseInt(d.breakMinutes, 10) || 0,
+        }));
+
+      if (activeDays.length === 0) {
+        toast.error('Please select at least one active working day');
+        return;
       }
 
       await api.post('/working-schedules', {
         name: scheduleForm.name,
         type: scheduleForm.type,
-        scheduleDays: days
+        scheduleDays: activeDays,
       });
 
       toast.success('Working schedule pattern created with auto-calculated weekly hours!');
@@ -253,14 +266,16 @@ export default function ContractListPage() {
     }
   ];
 
-  // Auto-calculated weekly hours preview for schedule modal
-  const previewHours = (() => {
-    const [sh, sm] = (scheduleForm.startTime || '09:00').split(':').map(Number);
-    const [eh, em] = (scheduleForm.endTime || '18:00').split(':').map(Number);
-    const dailyMins = (eh * 60 + em) - (sh * 60 + sm) - (parseInt(scheduleForm.breakMinutes) || 0);
-    const totalWeekly = (dailyMins * (scheduleForm.workDays || 5)) / 60;
-    return Math.max(0, totalWeekly).toFixed(1);
-  })();
+  // Auto-calculated weekly hours preview for schedule modal (A3)
+  const previewHours = patternDays
+    .filter(d => d.active)
+    .reduce((acc, d) => {
+      const [sh, sm] = (d.startTime || '09:00').split(':').map(Number);
+      const [eh, em] = (d.endTime || '18:00').split(':').map(Number);
+      const dailyMins = Math.max(0, (eh * 60 + em) - (sh * 60 + sm) - (parseInt(d.breakMinutes, 10) || 0));
+      return acc + (dailyMins / 60);
+    }, 0)
+    .toFixed(1);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
@@ -348,11 +363,50 @@ export default function ContractListPage() {
         </button>
       </div>
 
+      {/* Filter Chip Banner */}
+      {filterEmployeeId && activeTab === 'contracts' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '12px',
+          fontSize: '0.85rem',
+          color: '#1e40af',
+          boxShadow: '0 1px 4px rgba(37,99,235,0.08)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Filter size={16} color="#2563eb" />
+            <span>Filtering contracts for staff member: <strong>{filterEmployeeName || 'Selected Employee'}</strong></span>
+          </div>
+          <button
+            onClick={() => setSearchParams({})}
+            style={{
+              background: '#ffffff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              color: '#2563eb',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <X size={13} /> Clear Filter
+          </button>
+        </div>
+      )}
+
       {/* Active Tab Main Table */}
       {activeTab === 'contracts' ? (
         <DataTable
           columns={contractColumns}
-          data={contracts}
+          data={contracts.filter(c => !filterEmployeeId || c.employeeId === filterEmployeeId || c.employee?.id === filterEmployeeId)}
           loading={loading}
           searchPlaceholder="Search active contracts by employee or wage terms..."
         />
@@ -360,7 +414,7 @@ export default function ContractListPage() {
         <DataTable
           columns={scheduleColumns}
           data={schedules.length > 0 ? schedules : [
-            { id: 'ws1', name: 'Standard Full-Time Shift', type: 'STANDARD_40H', scheduleDays: [1,2,3,4,5], totalWeeklyHours: 40 },
+            { id: 'ws1', name: 'Standard Full-Time Shift', type: 'STANDARD', scheduleDays: [1,2,3,4,5], totalWeeklyHours: 45 },
             { id: 'ws2', name: 'Flexible Engineering Schedule', type: 'FLEXIBLE', scheduleDays: [1,2,3,4,5], totalWeeklyHours: 40 }
           ]}
           loading={loading}
@@ -481,16 +535,14 @@ export default function ContractListPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* NEW WORKING SCHEDULE MODAL (A3) */}
-      {/* ========================================================================= */}
+      {/* Define Working Schedule Pattern Modal (A3) */}
       {isScheduleModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '520px', width: '100%', padding: '26px' }}>
+          <div className="modal-content" style={{ maxWidth: '640px', width: '100%', padding: '26px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Define Working Schedule (A3)</h2>
-                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Configure daily shift pattern; total weekly hours are calculated automatically.</span>
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Define Working Schedule Pattern (A3)</h2>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Configure weekly day-by-day shift hours and breaks. Weekly hours are calculated automatically.</span>
               </div>
               <button
                 onClick={() => setIsScheduleModalOpen(false)}
@@ -500,20 +552,19 @@ export default function ContractListPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreateSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Schedule Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={scheduleForm.name}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-                  className="form-input"
-                  placeholder="e.g. Standard Full-Time (40h)"
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <form onSubmit={handleCreateSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Schedule Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={scheduleForm.name}
+                    onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
+                    className="form-input"
+                    placeholder="e.g. Standard 9-to-6 Shift (45h)"
+                  />
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Schedule Type</label>
                   <select
@@ -521,78 +572,130 @@ export default function ContractListPage() {
                     onChange={(e) => setScheduleForm({ ...scheduleForm, type: e.target.value })}
                     className="form-select"
                   >
-                    <option value="STANDARD_40H">Standard 40 Hours</option>
-                    <option value="FLEXIBLE">Flexible Working</option>
-                    <option value="PART_TIME_20H">Part-Time (20h)</option>
-                    <option value="SHIFT_BASED">Shift-Based</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Work Days / Week</label>
-                  <select
-                    value={scheduleForm.workDays}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, workDays: parseInt(e.target.value) })}
-                    className="form-select"
-                  >
-                    <option value="5">5 Days (Mon - Fri)</option>
-                    <option value="6">6 Days (Mon - Sat)</option>
-                    <option value="4">4 Days (Mon - Thu)</option>
+                    <option value="STANDARD">STANDARD</option>
+                    <option value="FLEXIBLE">FLEXIBLE</option>
+                    <option value="SHIFT">SHIFT</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Shift Start</label>
-                  <input
-                    type="time"
-                    required
-                    value={scheduleForm.startTime}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, startTime: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Shift End</label>
-                  <input
-                    type="time"
-                    required
-                    value={scheduleForm.endTime}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, endTime: e.target.value })}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Break (Mins)</label>
-                  <input
-                    type="number"
-                    required
-                    value={scheduleForm.breakMinutes}
-                    onChange={(e) => setScheduleForm({ ...scheduleForm, breakMinutes: e.target.value })}
-                    className="form-input"
-                  />
+              {/* Day-by-Day Pattern Matrix (Monday through Sunday) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
+                  Weekly Shift Days & Work Hours Pattern
+                </label>
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Work Day</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center' }}>Active</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Start Time</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>End Time</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Break (mins)</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Day Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {patternDays.map((d, index) => {
+                        const [sh, sm] = (d.startTime || '09:00').split(':').map(Number);
+                        const [eh, em] = (d.endTime || '18:00').split(':').map(Number);
+                        const dailyMins = Math.max(0, (eh * 60 + em) - (sh * 60 + sm) - (parseInt(d.breakMinutes, 10) || 0));
+                        const dailyHours = d.active ? (dailyMins / 60).toFixed(1) : '0.0';
+
+                        return (
+                          <tr key={d.dayOfWeek} style={{ borderBottom: index < 6 ? '1px solid #f1f5f9' : 'none', backgroundColor: d.active ? '#ffffff' : '#f8fafc' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 600, color: d.active ? '#0f172a' : '#94a3b8' }}>
+                              {d.name}
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={d.active}
+                                onChange={(e) => {
+                                  const updated = [...patternDays];
+                                  updated[index].active = e.target.checked;
+                                  setPatternDays(updated);
+                                }}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#4f46e5' }}
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <input
+                                type="time"
+                                disabled={!d.active}
+                                value={d.startTime}
+                                onChange={(e) => {
+                                  const updated = [...patternDays];
+                                  updated[index].startTime = e.target.value;
+                                  setPatternDays(updated);
+                                }}
+                                style={{ padding: '3px 6px', fontSize: '0.76rem', borderRadius: '6px', border: '1px solid #cbd5e1', opacity: d.active ? 1 : 0.5 }}
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <input
+                                type="time"
+                                disabled={!d.active}
+                                value={d.endTime}
+                                onChange={(e) => {
+                                  const updated = [...patternDays];
+                                  updated[index].endTime = e.target.value;
+                                  setPatternDays(updated);
+                                }}
+                                style={{ padding: '3px 6px', fontSize: '0.76rem', borderRadius: '6px', border: '1px solid #cbd5e1', opacity: d.active ? 1 : 0.5 }}
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                max="180"
+                                disabled={!d.active}
+                                value={d.breakMinutes}
+                                onChange={(e) => {
+                                  const updated = [...patternDays];
+                                  updated[index].breakMinutes = e.target.value;
+                                  setPatternDays(updated);
+                                }}
+                                style={{ width: '56px', padding: '3px 6px', fontSize: '0.76rem', borderRadius: '6px', border: '1px solid #cbd5e1', opacity: d.active ? 1 : 0.5 }}
+                              />
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: d.active ? '#4f46e5' : '#94a3b8' }}>
+                              {dailyHours}h
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
               {/* Auto-Calculated Hours Indicator Badge (A3) */}
               <div style={{
-                padding: '12px 14px',
+                padding: '12px 16px',
                 borderRadius: '10px',
-                backgroundColor: '#f0f9ff',
-                border: '1px solid #bae6fd',
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <span style={{ fontSize: '0.84rem', color: '#0369a1', fontWeight: 600 }}>
-                  Computed Total Weekly Hours:
-                </span>
-                <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0284c7' }}>
-                  {previewHours} hrs/week
+                <div>
+                  <span style={{ fontSize: '0.84rem', color: '#166534', fontWeight: 600 }}>
+                    Auto-Calculated Weekly Workload:
+                  </span>
+                  <div style={{ fontSize: '0.74rem', color: '#15803d' }}>
+                    {patternDays.filter(d => d.active).length} working days active
+                  </div>
+                </div>
+                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#15803d' }}>
+                  {previewHours} hrs / week
                 </span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
                 <button
                   type="button"
                   onClick={() => setIsScheduleModalOpen(false)}
@@ -604,7 +707,7 @@ export default function ContractListPage() {
                   type="submit"
                   className="btn btn-primary"
                 >
-                  Save Schedule
+                  Save Schedule Pattern
                 </button>
               </div>
             </form>
