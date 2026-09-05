@@ -22,6 +22,8 @@ router.get('/requests', ctrl.listRequests);
 router.post('/requests', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'EMPLOYEE']), validate(leaveRequestSchema), ctrl.submitRequest);
 router.get('/requests/:id', ctrl.getRequest);
 router.put('/requests/:id/approve', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']), ctrl.approveRequest);
+router.patch('/requests/:id/approve', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']), ctrl.approveRequest);
 router.put('/requests/:id/reject', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']), ctrl.rejectRequest);
+router.patch('/requests/:id/reject', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF']), ctrl.rejectRequest);
 
 module.exports = router;
