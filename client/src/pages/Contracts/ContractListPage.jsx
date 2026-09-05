@@ -29,9 +29,9 @@ export default function ContractListPage() {
         api.get('/employees'),
         api.get('/salary/structures')
       ]);
-      setContracts(contRes.data.data || []);
-      setEmployees(empRes.data.data || []);
-      setStructures(structRes.data.data || []);
+      setContracts(Array.isArray(contRes.data.data) ? contRes.data.data : (contRes.data.data?.data || []));
+      setEmployees(Array.isArray(empRes.data.data) ? empRes.data.data : (empRes.data.data?.data || []));
+      setStructures(Array.isArray(structRes.data.data) ? structRes.data.data : (structRes.data.data?.data || []));
     } catch (err) {
       // Mock contracts for demo
       setContracts([
@@ -80,8 +80,8 @@ export default function ContractListPage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: '#ffffff' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#38bdf8' }}>{row.employee?.code}</div>
+          <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
+          <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</div>
         </div>
       )
     },
@@ -89,14 +89,14 @@ export default function ContractListPage() {
       key: 'salaryStructure',
       label: 'Salary Structure',
       sortable: true,
-      render: (val, row) => row.salaryStructure?.name || 'Default Structure'
+      render: (val, row) => <span style={{ fontWeight: 500, color: '#334155' }}>{row.salaryStructure?.name || 'Default Structure'}</span>
     },
     {
       key: 'baseSalary',
       label: 'Base Wage',
       sortable: true,
       render: (val, row) => (
-        <span style={{ fontWeight: 600, color: '#10b981' }}>
+        <span style={{ fontWeight: 700, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>
           ${parseFloat(val || 0).toLocaleString()} / {row.wageType?.toLowerCase()}
         </span>
       )
@@ -105,7 +105,7 @@ export default function ContractListPage() {
       key: 'startDate',
       label: 'Effective Range',
       render: (_, row) => (
-        <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+        <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
           {new Date(row.startDate).toLocaleDateString()} — {row.endDate ? new Date(row.endDate).toLocaleDateString() : 'Indefinite'}
         </span>
       )
@@ -124,12 +124,27 @@ export default function ContractListPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        padding: '22px 26px',
+        backgroundColor: '#ffffff',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #eff6ff 100%)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff' }}>
-            Employment Contracts
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Employment Contracts
+            </h1>
+            <span className="badge badge-cyan">Active Agreements</span>
+          </div>
+          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
             Define wage terms, linked salary structures, and contractual timelines per employee.
           </p>
         </div>
@@ -151,23 +166,13 @@ export default function ContractListPage() {
       />
 
       {isModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px'
-        }}>
-          <div className="card" style={{ maxWidth: '520px', width: '100%', padding: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#ffffff' }}>Add Employment Contract</h2>
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '520px', width: '100%', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Add Employment Contract</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -175,12 +180,12 @@ export default function ContractListPage() {
 
             <form onSubmit={handleCreateContract} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Employee *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Employee *</label>
                 <select
                   required
                   value={formData.employeeId}
                   onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-select"
                 >
                   <option value="">Select Employee...</option>
                   {employees.map((e) => (
@@ -190,12 +195,12 @@ export default function ContractListPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Salary Structure *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Salary Structure *</label>
                 <select
                   required
                   value={formData.salaryStructureId}
                   onChange={(e) => setFormData({ ...formData, salaryStructureId: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-select"
                 >
                   <option value="">Select Salary Structure...</option>
                   {structures.map((s) => (
@@ -206,7 +211,7 @@ export default function ContractListPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Base Wage ($) *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Base Wage ($) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -214,15 +219,15 @@ export default function ContractListPage() {
                     placeholder="e.g. 7500"
                     value={formData.baseSalary}
                     onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Wage Period</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Wage Period</label>
                   <select
                     value={formData.wageType}
                     onChange={(e) => setFormData({ ...formData, wageType: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-select"
                   >
                     <option value="MONTHLY">Monthly</option>
                     <option value="HOURLY">Hourly</option>
@@ -232,27 +237,27 @@ export default function ContractListPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Start Date *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Start Date *</label>
                   <input
                     type="date"
                     required
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>End Date (Optional)</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>End Date (Optional)</label>
                   <input
                     type="date"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

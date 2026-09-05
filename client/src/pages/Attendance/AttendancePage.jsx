@@ -22,7 +22,7 @@ export default function AttendancePage() {
     setLoading(true);
     try {
       const { data } = await api.get('/attendance');
-      setLogs(data.data || []);
+      setLogs(Array.isArray(data.data) ? data.data : (data.data?.data || []));
     } catch (err) {
       setLogs([
         { id: '1', employee: { firstName: 'John', lastName: 'Doe', code: 'EMP-0001' }, date: '2026-03-05', checkIn: '2026-03-05T09:02:00Z', checkOut: '2026-03-05T17:30:00Z', status: 'PRESENT', totalHours: 8.46 },
@@ -38,7 +38,7 @@ export default function AttendancePage() {
   const fetchEmployees = async () => {
     try {
       const { data } = await api.get('/employees');
-      setEmployees(data.data || []);
+      setEmployees(Array.isArray(data.data) ? data.data : (data.data?.data || []));
     } catch (e) {}
   };
 
@@ -66,8 +66,8 @@ export default function AttendancePage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: '#fff' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#38bdf8' }}>{row.employee?.code}</span>
+          <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</span>
         </div>
       )
     },
@@ -86,7 +86,7 @@ export default function AttendancePage() {
       key: 'checkOut',
       label: 'Check Out',
       render: (val) => val ? new Date(val).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (
-        <span style={{ color: '#10b981', fontStyle: 'italic', fontSize: '0.8rem' }}>Clocked In</span>
+        <span style={{ color: '#10b981', fontStyle: 'italic', fontSize: '0.8rem', fontWeight: 600 }}>Clocked In</span>
       )
     },
     {
@@ -110,19 +110,34 @@ export default function AttendancePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        padding: '22px 26px',
+        backgroundColor: '#ffffff',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #ecfdf5 50%, #eff6ff 100%)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff' }}>
-            Workforce Attendance
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Workforce Attendance
+            </h1>
+            <span className="badge badge-green">Live Tracking</span>
+          </div>
+          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
             Daily check-in logs, biometric punches, hours tracked, and punch regularization.
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="btn btn-secondary"
+          className="btn btn-primary"
           style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           <Plus size={16} />
@@ -137,23 +152,13 @@ export default function AttendancePage() {
       />
 
       {isModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px'
-        }}>
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>Record Manual Attendance</h2>
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Record Manual Attendance</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -161,12 +166,12 @@ export default function AttendancePage() {
 
             <form onSubmit={handleManualAdjustment} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Employee *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Employee *</label>
                 <select
                   required
                   value={correctionData.employeeId}
                   onChange={(e) => setCorrectionData({ ...correctionData, employeeId: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-select"
                 >
                   <option value="">Select Employee...</option>
                   {employees.map((e) => (
@@ -176,50 +181,51 @@ export default function AttendancePage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Date *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Date *</label>
                 <input
                   type="date"
                   required
                   value={correctionData.date}
                   onChange={(e) => setCorrectionData({ ...correctionData, date: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-input"
                 />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Punch In</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Punch In</label>
                   <input
                     type="time"
                     required
                     value={correctionData.checkIn}
                     onChange={(e) => setCorrectionData({ ...correctionData, checkIn: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Punch Out</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Punch Out</label>
                   <input
                     type="time"
                     required
                     value={correctionData.checkOut}
                     onChange={(e) => setCorrectionData({ ...correctionData, checkOut: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Reason / Remarks</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reason / Remarks</label>
                 <input
                   type="text"
                   value={correctionData.remarks}
                   onChange={(e) => setCorrectionData({ ...correctionData, remarks: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  placeholder="e.g. Card scanner mismatch"
+                  className="form-input"
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

@@ -29,8 +29,8 @@ export default function LeavePage() {
         api.get('/leave/requests'),
         api.get('/leave/types')
       ]);
-      setRequests(reqRes.data.data || []);
-      setLeaveTypes(typeRes.data.data || []);
+      setRequests(Array.isArray(reqRes.data.data) ? reqRes.data.data : (reqRes.data.data?.data || []));
+      setLeaveTypes(Array.isArray(typeRes.data.data) ? typeRes.data.data : (typeRes.data.data?.data || []));
     } catch (err) {
       setRequests([
         { id: 'lr1', employee: { firstName: 'Michael', lastName: 'Brown', code: 'EMP-0003' }, leaveType: { name: 'Paid Annual Leave', paid: true }, startDate: '2026-03-10', endDate: '2026-03-12', totalDays: 3, reason: 'Family trip', status: 'PENDING' },
@@ -80,8 +80,8 @@ export default function LeavePage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <div style={{ fontWeight: 600, color: '#fff' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
-          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#38bdf8' }}>{row.employee?.code}</span>
+          <div style={{ fontWeight: 600, color: '#0f172a' }}>{row.employee?.firstName} {row.employee?.lastName}</div>
+          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>{row.employee?.code}</span>
         </div>
       )
     },
@@ -91,9 +91,9 @@ export default function LeavePage() {
       sortable: true,
       render: (_, row) => (
         <div>
-          <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{row.leaveType?.name}</span>
-          <span style={{ display: 'block', fontSize: '0.7rem', color: row.leaveType?.paid ? '#10b981' : '#f59e0b' }}>
-            {row.leaveType?.paid ? 'Paid' : 'Unpaid (Affects LOP)'}
+          <span style={{ color: '#0f172a', fontWeight: 600 }}>{row.leaveType?.name}</span>
+          <span style={{ display: 'block', fontSize: '0.74rem', color: row.leaveType?.paid ? '#059669' : '#d97706', fontWeight: 500 }}>
+            {row.leaveType?.paid ? '● Paid' : '● Unpaid (Affects LOP)'}
           </span>
         </div>
       )
@@ -103,10 +103,10 @@ export default function LeavePage() {
       label: 'Duration',
       render: (_, row) => (
         <div>
-          <div style={{ color: '#e2e8f0', fontSize: '0.85rem' }}>
+          <div style={{ color: '#334155', fontSize: '0.86rem', fontWeight: 500 }}>
             {new Date(row.startDate).toLocaleDateString()} — {new Date(row.endDate).toLocaleDateString()}
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+          <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
             {row.totalDays} {row.totalDays === 1 ? 'day' : 'days'}
           </span>
         </div>
@@ -115,7 +115,7 @@ export default function LeavePage() {
     {
       key: 'reason',
       label: 'Reason',
-      render: (val) => <span style={{ color: '#cbd5e1', fontSize: '0.85rem' }}>{val || '—'}</span>
+      render: (val) => <span style={{ color: '#64748b', fontSize: '0.85rem' }}>{val || '—'}</span>
     },
     {
       key: 'status',
@@ -132,22 +132,24 @@ export default function LeavePage() {
       key: 'actions',
       label: 'Approvals',
       render: (_, row) => {
-        if (row.status !== 'PENDING' || !isManager) return <span style={{ color: '#64748b', fontSize: '0.8rem' }}>Closed</span>;
+        if (row.status !== 'PENDING' || !isManager) return <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Closed</span>;
         return (
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={() => handleAction(row.id, 'approve')}
               style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                color: '#10b981',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                color: '#065f46',
                 fontSize: '0.75rem',
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
+                transition: 'all 0.15s ease'
               }}
             >
               <CheckCircle2 size={13} /> Approve
@@ -155,16 +157,18 @@ export default function LeavePage() {
             <button
               onClick={() => handleAction(row.id, 'reject')}
               style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#ef4444',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                background: '#fff1f2',
+                border: '1px solid #fecdd3',
+                color: '#9f1239',
                 fontSize: '0.75rem',
+                fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
+                transition: 'all 0.15s ease'
               }}
             >
               <XCircle size={13} /> Reject
@@ -177,12 +181,27 @@ export default function LeavePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        padding: '22px 26px',
+        backgroundColor: '#ffffff',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #eff6ff 100%)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff' }}>
-            Leave & Time Off Management
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Leave & Time Off Management
+            </h1>
+            <span className="badge badge-warning">Policies Active</span>
+          </div>
+          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
             Manage vacation accruals, sick leave, unpaid LOP deductions, and manager approvals.
           </p>
         </div>
@@ -203,15 +222,17 @@ export default function LeavePage() {
           title="Annual Paid Leave"
           value="18 Days"
           description="out of 20 days entitlement"
-          color="#14b8a6"
+          color="#10b981"
           icon={CalendarCheck}
+          badgeText="Accrued"
         />
         <StatCard
           title="Sick Leave Available"
           value="9 Days"
           description="out of 10 days policy"
-          color="#38bdf8"
+          color="#0ea5e9"
           icon={Clock}
+          badgeText="Medical"
         />
         <StatCard
           title="Unpaid Leave Taken"
@@ -219,6 +240,7 @@ export default function LeavePage() {
           description="deductible in payroll (LOP)"
           color="#f59e0b"
           icon={CalendarCheck}
+          badgeText="LOP Penalty"
         />
       </div>
 
@@ -229,23 +251,13 @@ export default function LeavePage() {
       />
 
       {isModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px'
-        }}>
-          <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ffffff' }}>Submit Leave Request</h2>
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '480px', width: '100%', padding: '26px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>Submit Leave Request</h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
               </button>
@@ -253,12 +265,12 @@ export default function LeavePage() {
 
             <form onSubmit={handleApplyLeave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Leave Type *</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Leave Type *</label>
                 <select
                   required
                   value={formData.leaveTypeId}
                   onChange={(e) => setFormData({ ...formData, leaveTypeId: e.target.value })}
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-select"
                 >
                   <option value="">Select Leave Type...</option>
                   {leaveTypes.map((t) => (
@@ -269,39 +281,39 @@ export default function LeavePage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Start Date *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Start Date *</label>
                   <input
                     type="date"
                     required
                     value={formData.startDate}
                     onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>End Date *</label>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>End Date *</label>
                   <input
                     type="date"
                     required
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                    className="form-input"
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>Reason / Notes</label>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Reason / Notes</label>
                 <textarea
                   rows="3"
                   value={formData.reason}
                   onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                   placeholder="Optional details for approving manager..."
-                  style={{ width: '100%', padding: '10px', backgroundColor: '#0f1219', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                  className="form-textarea"
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

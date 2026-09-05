@@ -26,8 +26,8 @@ export default function SalaryStructurePage() {
         api.get('/salary/structures'),
         api.get('/salary/rules')
       ]);
-      setStructures(strRes.data.data || []);
-      setRules(rulRes.data.data || []);
+      setStructures(Array.isArray(strRes.data.data) ? strRes.data.data : (strRes.data.data?.data || []));
+      setRules(Array.isArray(rulRes.data.data) ? rulRes.data.data : (rulRes.data.data?.data || []));
     } catch (err) {
       setStructures([
         { id: 's1', name: 'Standard Full-Time (Exempt)', code: 'STR-FULLTIME', description: 'Standard salary package with basic, HRA, PF and taxes', rulesCount: 6 },
@@ -144,28 +144,46 @@ export default function SalaryStructurePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: '#ffffff' }}>
-          Salary Structures & Dynamic Rule Engine
-        </h1>
-        <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginTop: '4px' }}>
-          Configure mathematical payroll compensation formulas, allowances, statutory deductions, and test them in real-time.
-        </p>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        padding: '22px 26px',
+        backgroundColor: '#ffffff',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f5f3ff 50%, #eff6ff 100%)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Salary Structures & Dynamic Rule Engine
+            </h1>
+            <span className="badge badge-purple">Rule Engine</span>
+          </div>
+          <p style={{ color: '#475569', fontSize: '0.88rem', marginTop: '4px' }}>
+            Configure mathematical payroll compensation formulas, allowances, statutory deductions, and test them in real-time.
+          </p>
+        </div>
       </div>
 
       {/* Navigation tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
         <button
           onClick={() => setActiveTab('structures')}
           style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: activeTab === 'structures' ? 'rgba(20, 184, 166, 0.15)' : 'transparent',
-            border: activeTab === 'structures' ? '1px solid rgba(20, 184, 166, 0.4)' : 'none',
-            color: activeTab === 'structures' ? '#14b8a6' : '#94a3b8',
+            padding: '8px 18px',
+            borderRadius: '10px',
+            background: activeTab === 'structures' ? '#eef2ff' : 'transparent',
+            border: activeTab === 'structures' ? '1px solid #c7d2fe' : '1px solid transparent',
+            color: activeTab === 'structures' ? '#4338ca' : '#64748b',
             fontWeight: 600,
             cursor: 'pointer',
-            fontSize: '0.9rem'
+            fontSize: '0.88rem',
+            transition: 'all 0.15s ease'
           }}
         >
           Salary Structures
@@ -173,14 +191,15 @@ export default function SalaryStructurePage() {
         <button
           onClick={() => setActiveTab('rules')}
           style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: activeTab === 'rules' ? 'rgba(20, 184, 166, 0.15)' : 'transparent',
-            border: activeTab === 'rules' ? '1px solid rgba(20, 184, 166, 0.4)' : 'none',
-            color: activeTab === 'rules' ? '#14b8a6' : '#94a3b8',
+            padding: '8px 18px',
+            borderRadius: '10px',
+            background: activeTab === 'rules' ? '#eef2ff' : 'transparent',
+            border: activeTab === 'rules' ? '1px solid #c7d2fe' : '1px solid transparent',
+            color: activeTab === 'rules' ? '#4338ca' : '#64748b',
             fontWeight: 600,
             cursor: 'pointer',
-            fontSize: '0.9rem'
+            fontSize: '0.88rem',
+            transition: 'all 0.15s ease'
           }}
         >
           Salary Rules
@@ -188,17 +207,18 @@ export default function SalaryStructurePage() {
         <button
           onClick={() => setActiveTab('sandbox')}
           style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            background: activeTab === 'sandbox' ? 'rgba(20, 184, 166, 0.15)' : 'transparent',
-            border: activeTab === 'sandbox' ? '1px solid rgba(20, 184, 166, 0.4)' : 'none',
-            color: activeTab === 'sandbox' ? '#14b8a6' : '#94a3b8',
+            padding: '8px 18px',
+            borderRadius: '10px',
+            background: activeTab === 'sandbox' ? '#eef2ff' : 'transparent',
+            border: activeTab === 'sandbox' ? '1px solid #c7d2fe' : '1px solid transparent',
+            color: activeTab === 'sandbox' ? '#4338ca' : '#64748b',
             fontWeight: 600,
             cursor: 'pointer',
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px'
+            gap: '6px',
+            transition: 'all 0.15s ease'
           }}
         >
           <Code size={16} /> Formula Sandbox
@@ -224,52 +244,47 @@ export default function SalaryStructurePage() {
       {activeTab === 'sandbox' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
           <div className="card" style={{ padding: '24px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fff', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
               Formula Evaluator & Rule Testbed
             </h3>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '20px' }}>
+            <p style={{ fontSize: '0.82rem', color: '#64748b', marginBottom: '20px' }}>
               Test formulas with dependency evaluation, math expressions (`min()`, `max()`, `round()`), and mock context variables.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Mathematical Formula Expression
                 </label>
                 <input
                   type="text"
                   value={sandboxExpr}
                   onChange={(e) => setSandboxExpr(e.target.value)}
+                  className="form-input"
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#0f1219',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
-                    color: '#fbbf24',
+                    color: '#6366f1',
                     fontFamily: 'monospace',
-                    fontSize: '0.9rem'
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    backgroundColor: '#f8fafc'
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#cbd5e1', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                   Context JSON (`contract`, `attendance`, `inputs`)
                 </label>
                 <textarea
                   rows="6"
                   value={sandboxContext}
                   onChange={(e) => setSandboxContext(e.target.value)}
+                  className="form-textarea"
                   style={{
-                    width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#0f1219',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: '8px',
-                    color: '#38bdf8',
+                    color: '#0f172a',
                     fontFamily: 'monospace',
-                    fontSize: '0.85rem'
+                    fontSize: '0.85rem',
+                    backgroundColor: '#f8fafc'
                   }}
                 />
               </div>
@@ -289,8 +304,9 @@ export default function SalaryStructurePage() {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: sandboxError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(20, 184, 166, 0.15)',
-              color: sandboxError ? '#ef4444' : '#14b8a6',
+              backgroundColor: sandboxError ? '#fff1f2' : '#ecfdf5',
+              color: sandboxError ? '#f43f5e' : '#10b981',
+              border: sandboxError ? '1px solid #fecdd3' : '1px solid #a7f3d0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -299,16 +315,16 @@ export default function SalaryStructurePage() {
               {sandboxError ? <AlertCircle size={32} /> : <CheckCircle2 size={32} />}
             </div>
 
-            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em', fontWeight: 700 }}>
               Evaluation Output
             </span>
 
             {sandboxResult !== null ? (
-              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#10b981', marginTop: '12px' }}>
+              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#059669', marginTop: '12px', fontVariantNumeric: 'tabular-nums' }}>
                 ${Number(sandboxResult).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             ) : sandboxError ? (
-              <div style={{ color: '#ef4444', marginTop: '12px', fontSize: '0.9rem' }}>
+              <div style={{ color: '#e11d48', marginTop: '12px', fontSize: '0.9rem', fontWeight: 500 }}>
                 {sandboxError}
               </div>
             ) : (

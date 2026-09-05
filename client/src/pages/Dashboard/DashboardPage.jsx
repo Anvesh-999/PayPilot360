@@ -10,7 +10,10 @@ import {
   AlertCircle,
   FileCheck,
   ChevronRight,
-  ArrowUpRight
+  ArrowUpRight,
+  Sparkles,
+  Layers,
+  CheckCircle2
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -30,44 +33,42 @@ export default function DashboardPage() {
     activeEmployees: 10,
     totalMonthlyPayroll: 396800,
     pendingLeaves: 2,
-    todayAttendanceRate: 96.5,
+    todayAttendanceRate: 95.8,
   });
+
   const [departmentData, setDepartmentData] = useState([
-    { name: 'Engineering', count: 6, color: '#14b8a6' },
-    { name: 'Sales', count: 2, color: '#38bdf8' },
-    { name: 'HR & Admin', count: 2, color: '#818cf8' },
+    { name: 'Engineering', count: 6, color: '#3b82f6' },
+    { name: 'Sales', count: 2, color: '#10b981' },
+    { name: 'HR & Admin', count: 2, color: '#8b5cf6' },
+    { name: 'Operations', count: 1, color: '#f59e0b' },
   ]);
-  const [payrollTrendData, setPayrollTrendData] = useState([
-    { month: 'Apr', gross: 380000, net: 342000, deductions: 38000 },
-    { month: 'May', gross: 385000, net: 346500, deductions: 38500 },
-    { month: 'Jun', gross: 390000, net: 351000, deductions: 39000 },
-    { month: 'Jul', gross: 396800, net: 357120, deductions: 39680 },
-  ]);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
       try {
         const { data } = await api.get('/dashboard/summary');
-        if (data.data?.kpis) {
-          const k = data.data.kpis;
+        if (data.data) {
+          const k = data.data.kpis || data.data;
           setStats({
-            activeEmployees: k.activeEmployees || 10,
-            totalMonthlyPayroll: k.averageSalary ? Math.round(k.averageSalary * (k.activeEmployees || 10)) : 396800,
-            pendingLeaves: k.pendingLeaveRequests ?? 2,
-            todayAttendanceRate: k.attendanceRate || 96.5,
+            activeEmployees: k.activeEmployees ?? k.totalEmployees ?? 10,
+            totalMonthlyPayroll: k.totalGrossSalary || k.totalMonthlyPayroll || (k.averageSalary ? Math.round(k.averageSalary * (k.activeEmployees || 10)) : 396800),
+            pendingLeaves: k.pendingLeaveRequests ?? k.pendingLeaves ?? 2,
+            todayAttendanceRate: k.attendanceRate ? parseFloat(k.attendanceRate) : 95.8,
           });
-        }
-        if (data.data?.charts?.departmentDistribution?.length > 0) {
-          const palette = ['#14b8a6', '#38bdf8', '#818cf8', '#f59e0b', '#ec4899'];
-          setDepartmentData(data.data.charts.departmentDistribution.map((d, i) => ({
-            name: d.name,
-            count: d.value,
-            color: palette[i % palette.length]
-          })));
+
+          if (data.data.charts?.departmentDistribution?.length > 0) {
+            const palette = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ec4899'];
+            setDepartmentData(data.data.charts.departmentDistribution.map((d, i) => ({
+              name: d.name,
+              count: d.value,
+              color: palette[i % palette.length]
+            })));
+          }
         }
       } catch (err) {
-        // Fallback default sample metrics shown for presentation
+        // Fallback default sample metrics
       } finally {
         setLoading(false);
       }
@@ -75,44 +76,70 @@ export default function DashboardPage() {
     fetchStats();
   }, []);
 
+  const payrollTrendData = [
+    { month: 'Nov', gross: 360000, net: 324000, deductions: 36000 },
+    { month: 'Dec', gross: 375000, net: 337500, deductions: 37500 },
+    { month: 'Jan', gross: 382000, net: 343800, deductions: 38200 },
+    { month: 'Feb', gross: 390000, net: 351000, deductions: 39000 },
+    { month: 'Mar', gross: 396800, net: 357120, deductions: 39680 },
+  ];
+
   const recentPayruns = [
-    { id: 'PR-2026-03', name: 'March 2026 Regular Cycle', period: 'Mar 1 - Mar 31, 2026', total: '$185,400.00', status: 'DRAFT', employees: 42 },
-    { id: 'PR-2026-02', name: 'February 2026 Regular Cycle', period: 'Feb 1 - Feb 28, 2026', total: '$182,400.00', status: 'PAID', employees: 41 },
-    { id: 'PR-2026-01', name: 'January 2026 Regular Cycle', period: 'Jan 1 - Jan 31, 2026', total: '$181,000.00', status: 'PAID', employees: 40 },
+    { id: 'PR-2026-03', name: 'March 2026 Regular Cycle', period: 'Mar 1 - Mar 31, 2026', total: '$396,800.00', status: 'DRAFT', employees: 10 },
+    { id: 'PR-2026-02', name: 'February 2026 Regular Cycle', period: 'Feb 1 - Feb 28, 2026', total: '$390,000.00', status: 'PAID', employees: 10 },
+    { id: 'PR-2026-01', name: 'January 2026 Regular Cycle', period: 'Jan 1 - Jan 31, 2026', total: '$382,000.00', status: 'PAID', employees: 9 },
   ];
 
   const isPayroll = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-      {/* Top Banner */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '26px' }}>
+      {/* Top Banner & Quick Controls */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: '16px'
+        gap: '16px',
+        padding: '22px 26px',
+        backgroundColor: '#ffffff',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 55%, #eef2ff 100%)',
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.02em', color: '#ffffff' }}>
-            Executive HR & Payroll Dashboard
-          </h1>
-          <p style={{ color: 'var(--text-muted, #94a3b8)', marginTop: '4px', fontSize: '0.9rem' }}>
-            Real-time workforce intelligence, payroll status, and organizational health.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
+              backgroundColor: '#ecfdf5',
+              color: '#059669'
+            }}>
+              <Sparkles size={16} />
+            </span>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+              Executive Overview
+            </h1>
+          </div>
+          <p style={{ margin: '6px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+            Live payroll run analytics, team distribution, and operational metrics for March 2026.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link to="/attendance" className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Clock size={15} /> Clock Records
+          </Link>
           {isPayroll && (
-            <Link to="/payroll" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <TrendingUp size={16} />
-              <span>Run Payroll Cycle</span>
+            <Link to="/payroll" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <ArrowUpRight size={15} /> Execute Payrun
             </Link>
           )}
-          <Link to="/leave" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <CalendarCheck size={16} />
-            <span>Apply Leave</span>
-          </Link>
         </div>
       </div>
 
@@ -120,179 +147,210 @@ export default function DashboardPage() {
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '20px'
+        gap: '18px'
       }}>
         <StatCard
-          title="Active Employees"
-          value={stats.activeEmployees || 42}
+          title="Active Headcount"
+          value={stats.activeEmployees}
+          description="Enrolled staff with contracts"
+          color="#6366f1"
           icon={Users}
-          change="+4.8%"
-          changeType="positive"
-          description="vs last quarter"
-          color="#14b8a6"
+          badgeText="+1 this month"
+          badgePositive={true}
         />
         <StatCard
-          title="Monthly Payroll Spend"
-          value={`$${(stats.totalMonthlyPayroll || 185400).toLocaleString()}`}
+          title="Monthly Payroll Cost"
+          value={`$${stats.totalMonthlyPayroll.toLocaleString()}`}
+          description="Projected gross wages + allowances"
+          color="#059669"
           icon={DollarSign}
-          change="+1.6%"
-          changeType="positive"
-          description="forecasted Mar 2026"
-          color="#38bdf8"
+          badgeText="+1.7% vs Feb"
+          badgePositive={true}
         />
         <StatCard
-          title="Today's Attendance"
-          value={`${stats.todayAttendanceRate || 94.2}%`}
-          icon={Clock}
-          change="+2.1%"
-          changeType="positive"
-          description="on-time clock-in rate"
-          color="#10b981"
-        />
-        <StatCard
-          title="Pending Leave Approvals"
-          value={stats.pendingLeaves ?? 3}
+          title="Pending Leave Review"
+          value={stats.pendingLeaves}
+          description="Time-off requests awaiting action"
+          color="#d97706"
           icon={CalendarCheck}
-          description="awaiting manager sign-off"
-          color="#f59e0b"
+          badgeText={stats.pendingLeaves > 0 ? 'Requires Action' : 'All clear'}
+          badgePositive={stats.pendingLeaves === 0}
+        />
+        <StatCard
+          title="Avg Attendance Rate"
+          value={`${stats.todayAttendanceRate}%`}
+          description="Check-ins recorded today"
+          color="#0284c7"
+          icon={Clock}
+          badgeText="Healthy"
+          badgePositive={true}
         />
       </div>
 
-      {/* Analytics Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '24px' }}>
-        {/* Payroll Trend Chart */}
+      {/* Visual Analytics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px' }}>
+        {/* Payroll Expense Evolution */}
         <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>
-                Payroll Disbursement Trend
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                Disbursement & Deduction Trends
               </h3>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Gross vs Net Payouts across the last 5 cycles ($USD)
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                5-month expenditure trajectory
               </span>
             </div>
-            <span className="badge badge-info" style={{ fontSize: '0.72rem' }}>5 Months</span>
+            <span className="badge badge-primary">FY 2025-26</span>
           </div>
-
-          <div style={{ height: '280px', width: '100%' }}>
+          <div style={{ height: '260px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={payrollTrendData}>
+              <AreaChart data={payrollTrendData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorGross" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#14b8a6" stopOpacity={0.0}/>
+                  <linearGradient id="grossGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0}/>
                   </linearGradient>
-                  <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0}/>
+                  <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} tickFormatter={(val) => `$${val / 1000}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1c2233', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  formatter={(value) => [`$${value.toLocaleString()}`, '']}
+                  formatter={(val) => [`$${val.toLocaleString()}`, '']}
+                  contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: '12px' }}
                 />
-                <Legend />
-                <Area type="monotone" dataKey="gross" name="Gross Pay" stroke="#14b8a6" fillOpacity={1} fill="url(#colorGross)" />
-                <Area type="monotone" dataKey="net" name="Net Pay" stroke="#38bdf8" fillOpacity={1} fill="url(#colorNet)" />
+                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#64748b' }} />
+                <Area type="monotone" dataKey="gross" name="Gross Pay" stroke="#6366f1" strokeWidth={2.5} fillOpacity={1} fill="url(#grossGrad)" />
+                <Area type="monotone" dataKey="net" name="Net Disbursed" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#netGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Department Distribution */}
+        {/* Headcount by Department */}
         <div className="card" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
             <div>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>
-                Department Headcount Distribution
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+                Department Distribution
               </h3>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                Active full-time workforce by business unit
+              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                Headcount breakdown by operational business unit
               </span>
             </div>
-            <span className="badge badge-success" style={{ fontSize: '0.72rem' }}>42 Headcount</span>
+            <Link to="/employees" style={{ fontSize: '0.8rem', color: '#6366f1', textDecoration: 'none', fontWeight: 600 }}>
+              View Directory &rarr;
+            </Link>
           </div>
-
-          <div style={{ height: '280px', width: '100%', display: 'flex', alignItems: 'center' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={departmentData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={95}
-                  paddingAngle={5}
-                  dataKey="count"
-                >
-                  {departmentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1c2233', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  formatter={(val, name) => [`${val} Employees`, name]}
-                />
-                <Legend layout="vertical" align="right" verticalAlign="middle" />
-              </PieChart>
-            </ResponsiveContainer>
+          <div style={{ display: 'flex', alignItems: 'center', height: '260px' }}>
+            <div style={{ width: '55%', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={departmentData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={5}
+                    dataKey="count"
+                  >
+                    {departmentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', fontSize: '12px' }}
+                    formatter={(val, name) => [`${val} Members`, name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ width: '45%', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {departmentData.map((dept, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '3px', backgroundColor: dept.color }} />
+                    <span style={{ color: '#475569', fontWeight: 500 }}>{dept.name}</span>
+                  </div>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{dept.count}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Payroll Cycles Table */}
-      <div className="card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      {/* Payrun Management Snapshot */}
+      <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+        <div style={{
+          padding: '18px 24px',
+          borderBottom: '1px solid var(--border-color)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: '#fafbfc'
+        }}>
           <div>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 600, color: '#ffffff' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
               Recent Payroll Cycles
             </h3>
-            <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-              Status of past and current automated pay periods
+            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+              Batches calculated and settled across the company
             </span>
           </div>
-          <Link to="/payroll" style={{ color: '#14b8a6', fontSize: '0.85rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            View all payruns <ArrowUpRight size={14} />
+          <Link to="/payroll" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            All Runs <ChevronRight size={14} />
           </Link>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase' }}>
-                <th style={{ padding: '12px 16px' }}>Cycle Name</th>
-                <th style={{ padding: '12px 16px' }}>Period</th>
-                <th style={{ padding: '12px 16px' }}>Employees</th>
-                <th style={{ padding: '12px 16px' }}>Total Payout</th>
-                <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)', color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <th style={{ padding: '12px 24px' }}>Batch Identifier</th>
+              <th style={{ padding: '12px 24px' }}>Cycle Name</th>
+              <th style={{ padding: '12px 24px' }}>Period</th>
+              <th style={{ padding: '12px 24px' }}>Staff Included</th>
+              <th style={{ padding: '12px 24px' }}>Total Amount</th>
+              <th style={{ padding: '12px 24px' }}>Status</th>
+              <th style={{ padding: '12px 24px', textAlign: 'right' }}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentPayruns.map((pr) => (
+              <tr key={pr.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '0.88rem' }} className="table-row-hover">
+                <td style={{ padding: '14px 24px', fontWeight: 700, color: '#6366f1', fontFamily: 'monospace' }}>
+                  {pr.id}
+                </td>
+                <td style={{ padding: '14px 24px', fontWeight: 600, color: '#0f172a' }}>
+                  {pr.name}
+                </td>
+                <td style={{ padding: '14px 24px', color: '#64748b', fontSize: '0.82rem' }}>
+                  {pr.period}
+                </td>
+                <td style={{ padding: '14px 24px', color: '#334155' }}>
+                  {pr.employees} Employees
+                </td>
+                <td style={{ padding: '14px 24px', fontWeight: 700, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
+                  {pr.total}
+                </td>
+                <td style={{ padding: '14px 24px' }}>
+                  <span className={`badge ${pr.status === 'PAID' ? 'badge-success' : 'badge-warning'}`}>
+                    {pr.status === 'PAID' ? '✓ Disbursed' : '● In Draft'}
+                  </span>
+                </td>
+                <td style={{ padding: '14px 24px', textAlign: 'right' }}>
+                  <Link to="/payroll" className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '0.78rem' }}>
+                    Inspect
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {recentPayruns.map((pr) => (
-                <tr key={pr.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.875rem' }}>
-                  <td style={{ padding: '14px 16px', fontWeight: 600, color: '#ffffff' }}>{pr.name}</td>
-                  <td style={{ padding: '14px 16px', color: '#94a3b8' }}>{pr.period}</td>
-                  <td style={{ padding: '14px 16px', color: '#e2e8f0' }}>{pr.employees}</td>
-                  <td style={{ padding: '14px 16px', fontWeight: 600, color: '#14b8a6' }}>{pr.total}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span className={`badge ${pr.status === 'PAID' ? 'badge-success' : 'badge-warning'}`}>
-                      {pr.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                    <Link to="/payroll" className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: '0.75rem', textDecoration: 'none' }}>
-                      Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
