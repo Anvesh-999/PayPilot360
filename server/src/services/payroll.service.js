@@ -312,8 +312,13 @@ class PayrollService {
    * Validate a payrun — produce warnings for review.
    */
   async validate(payrunId) {
-    const payrun = await this.getPayrun(payrunId);
-    this.assertStatus(payrun, ['CALCULATED']);
+    let payrun = await this.getPayrun(payrunId);
+    if (payrun.status === 'DRAFT') {
+      await this.calculate(payrunId);
+      payrun = await this.getPayrun(payrunId);
+    } else {
+      this.assertStatus(payrun, ['CALCULATED', 'REVIEW']);
+    }
 
     const payslips = await prisma.payslip.findMany({
       where: { payrunId },
