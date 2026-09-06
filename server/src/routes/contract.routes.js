@@ -9,10 +9,10 @@ const { contractCreateSchema, contractUpdateSchema } = require('../validators/sc
 router.use(authenticateJWT);
 
 router.get('/', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'EMPLOYEE']), ctrl.list);
-router.post('/', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(contractCreateSchema), auditLogger('Contract', 'CREATE'), ctrl.create);
+router.post('/', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), validate(contractCreateSchema), auditLogger('Contract', 'CREATE'), ctrl.create);
 router.get('/resolve', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_MANAGER']), ctrl.resolve);
 router.get('/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'EMPLOYEE']), ctrl.getById);
-router.put('/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(contractUpdateSchema), auditLogger('Contract', 'UPDATE'), ctrl.update);
-router.delete('/:id', authorizeRole(['SUPER_ADMIN']), auditLogger('Contract', 'DELETE'), ctrl.remove);
+router.put('/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), validate(contractUpdateSchema), auditLogger('Contract', 'UPDATE'), ctrl.update);
+router.delete('/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), auditLogger('Contract', 'DELETE'), ctrl.remove);
 
 module.exports = router;

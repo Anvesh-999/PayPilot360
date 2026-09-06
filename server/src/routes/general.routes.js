@@ -20,21 +20,21 @@ router.get('/departments', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post('/departments', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(departmentSchema), async (req, res, next) => {
+router.post('/departments', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), validate(departmentSchema), async (req, res, next) => {
   try {
     const dept = await prisma.department.create({ data: req.body });
     res.status(201).json({ success: true, data: dept });
   } catch (error) { next(error); }
 });
 
-router.put('/departments/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), async (req, res, next) => {
+router.put('/departments/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), async (req, res, next) => {
   try {
     const dept = await prisma.department.update({ where: { id: req.params.id }, data: req.body });
     res.json({ success: true, data: dept });
   } catch (error) { next(error); }
 });
 
-router.delete('/departments/:id', authorizeRole(['SUPER_ADMIN']), async (req, res, next) => {
+router.delete('/departments/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER']), async (req, res, next) => {
   try {
     await prisma.department.delete({ where: { id: req.params.id } });
     res.json({ success: true, data: { message: 'Department deleted' } });
@@ -53,21 +53,21 @@ router.get('/job-positions', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post('/job-positions', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(jobPositionSchema), async (req, res, next) => {
+router.post('/job-positions', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), validate(jobPositionSchema), async (req, res, next) => {
   try {
     const pos = await prisma.jobPosition.create({ data: req.body });
     res.status(201).json({ success: true, data: pos });
   } catch (error) { next(error); }
 });
 
-router.put('/job-positions/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), async (req, res, next) => {
+router.put('/job-positions/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), async (req, res, next) => {
   try {
     const pos = await prisma.jobPosition.update({ where: { id: req.params.id }, data: req.body });
     res.json({ success: true, data: pos });
   } catch (error) { next(error); }
 });
 
-router.delete('/job-positions/:id', authorizeRole(['SUPER_ADMIN']), async (req, res, next) => {
+router.delete('/job-positions/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER']), async (req, res, next) => {
   try {
     await prisma.jobPosition.delete({ where: { id: req.params.id } });
     res.json({ success: true, data: { message: 'Position deleted' } });
@@ -86,7 +86,7 @@ router.get('/working-schedules', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.post('/working-schedules', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), validate(workingScheduleSchema), async (req, res, next) => {
+router.post('/working-schedules', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), validate(workingScheduleSchema), async (req, res, next) => {
   try {
     const { scheduleDays, ...scheduleData } = req.body;
 
@@ -138,7 +138,7 @@ router.get('/working-schedules/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-router.put('/working-schedules/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']), async (req, res, next) => {
+router.put('/working-schedules/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']), async (req, res, next) => {
   try {
     const { scheduleDays, ...scheduleData } = req.body;
 
@@ -181,7 +181,7 @@ router.put('/working-schedules/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']
   } catch (error) { next(error); }
 });
 
-router.delete('/working-schedules/:id', authorizeRole(['SUPER_ADMIN']), async (req, res, next) => {
+router.delete('/working-schedules/:id', authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER']), async (req, res, next) => {
   try {
     await prisma.workingSchedule.delete({ where: { id: req.params.id } });
     res.json({ success: true, data: { message: 'Schedule deleted' } });

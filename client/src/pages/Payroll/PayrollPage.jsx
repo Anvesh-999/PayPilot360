@@ -29,8 +29,11 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function PayrollPage() {
+  const { hasRole } = useAuth();
+  const canApproveAndDisburse = hasRole(['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER']);
   const [payruns, setPayruns] = useState([]);
   const [activePayrun, setActivePayrun] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -626,56 +629,74 @@ export default function PayrollPage() {
                 <ShieldAlert size={14} color={isPaid ? '#94a3b8' : '#f59e0b'} /> Validate
               </button>
 
-              <button
-                onClick={handleApprove}
-                disabled={isPaid || activePayrun.status === 'APPROVED' || isCalculating}
-                className="btn btn-violet btn-sm"
-                style={{
+              {canApproveAndDisburse ? (
+                <>
+                  <button
+                    onClick={handleApprove}
+                    disabled={isPaid || activePayrun.status === 'APPROVED' || isCalculating}
+                    className="btn btn-violet btn-sm"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                      opacity: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 0.45 : 1,
+                      cursor: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 'not-allowed' : 'pointer'
+                    }}
+                    title={isPaid ? 'Already approved and settled' : 'Managerial sign-off and approval'}
+                  >
+                    <CheckCircle2 size={14} /> Approve Cycle
+                  </button>
+
+                  {!isPaid && (
+                    <button
+                      onClick={handleMarkPaid}
+                      disabled={isCalculating}
+                      className="btn btn-emerald btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                      title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
+                    >
+                      <IndianRupee size={14} /> Mark Paid & Dispatch
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleSendPayslips}
+                    disabled={isCalculating}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6366f1', borderColor: '#c7d2fe', whiteSpace: 'nowrap' }}
+                    title="Bulk email payslips to all employees"
+                  >
+                    <Send size={14} /> Send Payslips
+                  </button>
+
+                  {/* Re-open cycle if already paid */}
+                  {isPaid && (
+                    <button
+                      onClick={handleResetToDraft}
+                      disabled={isCalculating}
+                      className="btn btn-secondary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#b45309', borderColor: '#fed7aa', backgroundColor: '#fffbeb', whiteSpace: 'nowrap' }}
+                      title="Re-open this cycle to make adjustments or recalculations"
+                    >
+                      <RotateCcw size={14} /> Re-open Cycle
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  whiteSpace: 'nowrap',
-                  opacity: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 0.45 : 1,
-                  cursor: (isPaid || activePayrun.status === 'APPROVED' || isCalculating) ? 'not-allowed' : 'pointer'
-                }}
-                title={isPaid ? 'Already approved and settled' : 'Managerial sign-off and approval'}
-              >
-                <CheckCircle2 size={14} /> Approve Cycle
-              </button>
-
-              {!isPaid && (
-                <button
-                  onClick={handleMarkPaid}
-                  disabled={isCalculating}
-                  className="btn btn-emerald btn-sm"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-                  title="Mark payrun as Paid, finalize, and dispatch official PDF payslips to employee emails"
-                >
-                  <IndianRupee size={14} /> Mark Paid & Dispatch
-                </button>
-              )}
-
-              <button
-                onClick={handleSendPayslips}
-                disabled={isCalculating}
-                className="btn btn-secondary btn-sm"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#6366f1', borderColor: '#c7d2fe', whiteSpace: 'nowrap' }}
-                title="Bulk email payslips to all employees"
-              >
-                <Send size={14} /> Send Payslips
-              </button>
-
-              {/* Re-open cycle if already paid */}
-              {isPaid && (
-                <button
-                  onClick={handleResetToDraft}
-                  disabled={isCalculating}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#b45309', borderColor: '#fed7aa', backgroundColor: '#fffbeb', whiteSpace: 'nowrap' }}
-                  title="Re-open this cycle to make adjustments or recalculations"
-                >
-                  <RotateCcw size={14} /> Re-open Cycle
-                </button>
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  backgroundColor: '#f1f5f9',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.75rem',
+                  color: '#475569'
+                }}>
+                  <span>🔒 Approvals & Disbursal: Reserved for HR Payroll Manager</span>
+                </div>
               )}
             </div>
           </div>

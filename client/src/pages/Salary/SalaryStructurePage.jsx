@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import DataTable from '../../components/Common/DataTable';
-import { Layers, Plus, Code, Play, CheckCircle2, AlertCircle, Trash2, Edit } from 'lucide-react';
+import { Layers, Plus, Code, Play, CheckCircle2, AlertCircle, Trash2, Edit, ShieldAlert } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function SalaryStructurePage() {
+  const { hasRole } = useAuth();
+  const canManage = hasRole(['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER']);
   const [structures, setStructures] = useState([]);
   const [rules, setRules] = useState([]);
   const [activeTab, setActiveTab] = useState('structures');
@@ -187,6 +190,27 @@ export default function SalaryStructurePage() {
           </p>
         </div>
       </div>
+
+      {/* Read-Only Banner for HR Payroll User */}
+      {!canManage && (
+        <div style={{
+          padding: '14px 18px',
+          borderRadius: '12px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          color: '#1e40af',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.02)'
+        }}>
+          <CheckCircle2 size={20} color="#2563eb" style={{ flexShrink: 0 }} />
+          <div>
+            <strong>Read-Only Access (HR Payroll User):</strong> You have read-only inspection access to company salary structures and rule expressions. Modifications, rule creation, and structural changes require <strong>HR Payroll Manager</strong> or <strong>Admin</strong> privileges.
+          </div>
+        </div>
+      )}
 
       {/* Navigation tabs */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>

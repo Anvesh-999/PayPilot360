@@ -8,7 +8,7 @@ router.use(authenticateJWT);
 // Anomaly Audit for a Payrun
 router.get(
   '/payroll-anomalies/:payrunId',
-  authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_MANAGER']),
+  authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   ctrl.getPayrunAnomalies
 );
 
@@ -21,7 +21,7 @@ router.post(
 // 1-Click C-Suite Executive Summary Memo
 router.get(
   '/executive-summary/:payrunId',
-  authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_MANAGER']),
+  authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   ctrl.getExecutiveSummary
 );
 

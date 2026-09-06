@@ -19,7 +19,7 @@ router.get(
 // Create employee
 router.post(
   '/',
-  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']),
+  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   validate(employeeCreateSchema),
   auditLogger('Employee', 'CREATE'),
   employeeController.create
@@ -35,14 +35,14 @@ router.get(
 // Get employee summary (smart button counts - HR & Payroll only)
 router.get(
   '/:id/summary',
-  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER']),
+  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   employeeController.getSummary
 );
 
 // Update employee
 router.put(
   '/:id',
-  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER']),
+  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   validate(employeeUpdateSchema),
   auditLogger('Employee', 'UPDATE'),
   employeeController.update
@@ -51,7 +51,7 @@ router.put(
 // Terminate (soft-delete) employee
 router.delete(
   '/:id',
-  authorizeRole(['SUPER_ADMIN']),
+  authorizeRole(['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'PAYROLL_USER']),
   auditLogger('Employee', 'DELETE'),
   employeeController.terminate
 );

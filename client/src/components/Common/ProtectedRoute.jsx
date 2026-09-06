@@ -35,7 +35,22 @@ export default function ProtectedRoute({ allowedRoles }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+  const ROLE_ALIASES = {
+    ADMIN: 'SUPER_ADMIN',
+    SUPER_ADMIN: 'SUPER_ADMIN',
+    HR_PAYROLL_MANAGER: 'PAYROLL_MANAGER',
+    PAYROLL_MANAGER: 'PAYROLL_MANAGER',
+    HR_PAYROLL_USER: 'PAYROLL_USER',
+    PAYROLL_USER: 'PAYROLL_USER',
+    HR_MANAGER: 'HR_MANAGER',
+    HR_STAFF: 'HR_STAFF',
+    EMPLOYEE: 'EMPLOYEE',
+  };
+
+  const userRole = ROLE_ALIASES[user?.role] || user?.role;
+  const normalizedAllowed = allowedRoles?.map(r => ROLE_ALIASES[r] || r);
+
+  if (normalizedAllowed && normalizedAllowed.length > 0 && !normalizedAllowed.includes(userRole)) {
     if (user?.role === 'EMPLOYEE') {
       return <Navigate to="/portal" replace />;
     }

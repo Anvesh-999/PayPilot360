@@ -61,11 +61,28 @@ const authenticateJWT = async (req, res, next) => {
   }
 };
 
+// Role alias map to support both canonical naming and display naming
+const ROLE_ALIASES = {
+  ADMIN: 'SUPER_ADMIN',
+  SUPER_ADMIN: 'SUPER_ADMIN',
+  HR_PAYROLL_MANAGER: 'PAYROLL_MANAGER',
+  PAYROLL_MANAGER: 'PAYROLL_MANAGER',
+  HR_PAYROLL_USER: 'PAYROLL_USER',
+  PAYROLL_USER: 'PAYROLL_USER',
+  HR_MANAGER: 'HR_MANAGER',
+  HR_STAFF: 'HR_STAFF',
+  EMPLOYEE: 'EMPLOYEE',
+};
+
+const normalizeRole = (r) => ROLE_ALIASES[r] || r;
+
 /**
  * Middleware factory: Restrict access to specific roles.
+ * Supports role aliases (e.g. ADMIN <-> SUPER_ADMIN, HR_PAYROLL_MANAGER <-> PAYROLL_MANAGER).
  * @param {string[]} allowedRoles - Array of RoleName values
  */
 const authorizeRole = (allowedRoles) => {
+  const normalizedAllowed = allowedRoles.map(normalizeRole);
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -74,7 +91,9 @@ const authorizeRole = (allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.roleName)) {
+    const userRole = normalizeRole(req.user.roleName);
+
+    if (!normalizedAllowed.includes(userRole)) {
       return res.status(403).json({
         success: false,
         error: {

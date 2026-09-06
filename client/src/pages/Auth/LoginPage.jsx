@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Sparkles, Receipt } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -215,12 +215,12 @@ export default function LoginPage() {
               type="button"
               onClick={() => handleQuickFill('admin@peoplepay360.com', 'Password@123')}
               style={{
-                padding: '10px 12px',
-                backgroundColor: '#f5f3ff',
-                border: '1px solid #ddd6fe',
+                padding: '9px 11px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
                 borderRadius: '10px',
-                color: '#5b21b6',
-                fontSize: '0.8rem',
+                color: '#991b1b',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -229,22 +229,23 @@ export default function LoginPage() {
                 gap: '8px',
                 transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(139, 92, 246, 0.2)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.2)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              <ShieldCheck size={16} color="#7c3aed" />
-              <span>Super Admin</span>
+              <ShieldCheck size={15} color="#dc2626" />
+              <span>Admin</span>
             </button>
+
             <button
               type="button"
               onClick={() => handleQuickFill('hr.manager@peoplepay360.com', 'Password@123')}
               style={{
-                padding: '10px 12px',
-                backgroundColor: '#f0f9ff',
-                border: '1px solid #bae6fd',
+                padding: '9px 11px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
                 borderRadius: '10px',
-                color: '#0369a1',
-                fontSize: '0.8rem',
+                color: '#1e40af',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -253,46 +254,23 @@ export default function LoginPage() {
                 gap: '8px',
                 transition: 'all 0.15s ease'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(14, 165, 233, 0.2)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              <Users size={16} color="#0284c7" />
+              <Users size={15} color="#2563eb" />
               <span>HR Manager</span>
             </button>
+
             <button
               type="button"
-              onClick={() => handleQuickFill('payroll.manager@peoplepay360.com', 'Password@123')}
+              onClick={() => handleQuickFill('payroll.user@peoplepay360.com', 'Password@123')}
               style={{
-                padding: '10px 12px',
-                backgroundColor: '#eef2ff',
-                border: '1px solid #c7d2fe',
+                padding: '9px 11px',
+                backgroundColor: '#f0fdf4',
+                border: '1px solid #bbf7d0',
                 borderRadius: '10px',
-                color: '#4338ca',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.2)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <Calculator size={16} color="#4f46e5" />
-              <span>Payroll Lead</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickFill('aisha.verma@peoplepay360.com', 'Password@123')}
-              style={{
-                padding: '10px 12px',
-                backgroundColor: '#ecfdf5',
-                border: '1px solid #a7f3d0',
-                borderRadius: '10px',
-                color: '#065f46',
-                fontSize: '0.8rem',
+                color: '#15803d',
+                fontSize: '0.78rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 textAlign: 'left',
@@ -304,8 +282,60 @@ export default function LoginPage() {
               onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              <UserCheck size={16} color="#059669" />
-              <span>Staff Portal</span>
+              <Receipt size={15} color="#16a34a" />
+              <span>HR Payroll User</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickFill('payroll.manager@peoplepay360.com', 'Password@123')}
+              style={{
+                padding: '9px 11px',
+                backgroundColor: '#faf5ff',
+                border: '1px solid #e9d5ff',
+                borderRadius: '10px',
+                color: '#6b21a8',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.2)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              <Calculator size={15} color="#9333ea" />
+              <span>HR Payroll Mgr</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickFill('aisha.verma@peoplepay360.com', 'Password@123')}
+              style={{
+                gridColumn: 'span 2',
+                padding: '9px 11px',
+                backgroundColor: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '10px',
+                color: '#334155',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(100, 116, 139, 0.2)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              <UserCheck size={15} color="#475569" />
+              <span>Employee Portal (Aisha Verma)</span>
             </button>
           </div>
         </div>

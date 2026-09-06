@@ -9,8 +9,8 @@ const { salaryStructureSchema, salaryRuleSchema } = require('../validators/schem
 router.use(authenticateJWT);
 
 // Salary Structures
-router.get('/structures', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_MANAGER']), ctrl.listStructures);
-router.get('/structures/:id', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_MANAGER']), ctrl.getStructure);
+router.get('/structures', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']), ctrl.listStructures);
+router.get('/structures/:id', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']), ctrl.getStructure);
 router.post('/structures', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), validate(salaryStructureSchema), auditLogger('SalaryStructure', 'CREATE'), ctrl.createStructure);
 router.put('/structures/:id', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('SalaryStructure', 'UPDATE'), ctrl.updateStructure);
 router.delete('/structures/:id', authorizeRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']), auditLogger('SalaryStructure', 'DELETE'), ctrl.deleteStructure);

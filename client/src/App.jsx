@@ -14,6 +14,7 @@ import SalaryStructurePage from './pages/Salary/SalaryStructurePage';
 import PayrollPage from './pages/Payroll/PayrollPage';
 import PayslipListPage from './pages/Payslips/PayslipListPage';
 import EmployeePortalPage from './pages/Portal/EmployeePortalPage';
+import UserManagementPage from './pages/Admin/UserManagementPage';
 
 export default function App() {
   return (
@@ -30,26 +31,34 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/attendance" element={<AttendancePage />} />
               <Route path="/leave" element={<LeavePage />} />
-              <Route path="/payslips" element={<PayslipListPage />} />
               <Route path="/portal" element={<EmployeePortalPage />} />
 
-              {/* Employee Directory Routes - Staff listing is restricted to HR & Admins */}
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']} />}>
+              {/* Employee Directory Routes - Restricted to Core HR, Payroll & Admin */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']} />}>
                 <Route path="/employees" element={<EmployeeListPage />} />
               </Route>
 
-              {/* Contract & Structure Management */}
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER']} />}>
+              {/* Contract Management */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']} />}>
                 <Route path="/contracts" element={<ContractListPage />} />
               </Route>
 
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'PAYROLL_MANAGER', 'HR_MANAGER']} />}>
+              {/* Salary Structures & Rules - Accessible to Admin, HR Payroll Manager, and HR Payroll User (Read-Only) */}
+              {/* Strictly restricted from HR Manager */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']} />}>
                 <Route path="/salary-structures" element={<SalaryStructurePage />} />
               </Route>
 
-              {/* Payroll Lifecycle Engine */}
-              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']} />}>
+              {/* Payroll Lifecycle Engine - Restricted to Admin, HR Payroll Manager, and HR Payroll User */}
+              {/* Strictly restricted from HR Manager */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']} />}>
                 <Route path="/payroll" element={<PayrollPage />} />
+                <Route path="/payslips" element={<PayslipListPage />} />
+              </Route>
+
+              {/* User & Role Management - Exclusively for Platform Admin */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN']} />}>
+                <Route path="/users" element={<UserManagementPage />} />
               </Route>
             </Route>
           </Route>

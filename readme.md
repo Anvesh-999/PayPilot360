@@ -217,11 +217,11 @@ The database seed provides ready-to-test accounts across multiple roles with pas
 
 | Role | Email Address | Password | Focus Area |
 |---|---|---|---|
-| **Super Admin** | `admin@peoplepay360.com` | `Password@123` | Full administrative control & system overview |
-| **HR Manager** | `hr.manager@peoplepay360.com` | `Password@123` | Staff directory, onboarding, leave approvals |
-| **Payroll Manager** | `payroll.manager@peoplepay360.com` | `Password@123` | Salary rules, payrun computation, payslip email dispatch |
-| **Payroll User** | `payroll.user@peoplepay360.com` | `Password@123` | Payroll auditing & cycle inspection |
-| **Staff Employee** | `aisha.verma@peoplepay360.com` | `Password@123` | Self-service portal, clock in/out, personal payslips |
+| **Admin** | `admin@peoplepay360.com` | `Password@123` | Full administrative authority, user management & system overview |
+| **HR Manager** | `hr.manager@peoplepay360.com` | `Password@123` | Full CRUD on Employees, Contracts, Attendance, Schedules & Leaves (No Payroll) |
+| **HR Payroll User** | `payroll.user@peoplepay360.com` | `Password@123` | All HR permissions + Payruns/Payslips CRU + Salary Structure Read-Only |
+| **HR Payroll Manager** | `payroll.manager@peoplepay360.com` | `Password@123` | All HR permissions + Full CRUD on Payruns, Payslips, and Salary Rules |
+| **Employee** | `aisha.verma@peoplepay360.com` | `Password@123` | Self-service portal, own attendance punching & leave requests |
 
 ---
 

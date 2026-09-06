@@ -52,13 +52,16 @@ export default function Navbar() {
   const getRoleBadge = (role) => {
     switch (role) {
       case 'SUPER_ADMIN':
-        return { label: 'Super Admin', className: 'badge-innowise' };
+      case 'ADMIN':
+        return { label: 'Admin', className: 'badge-innowise' };
       case 'HR_MANAGER':
         return { label: 'HR Manager', className: 'badge-cyan' };
       case 'PAYROLL_MANAGER':
-        return { label: 'Payroll Manager', className: 'badge-innowise' };
+      case 'HR_PAYROLL_MANAGER':
+        return { label: 'HR Payroll Manager', className: 'badge-innowise' };
       case 'PAYROLL_USER':
-        return { label: 'Payroll Staff', className: 'badge-info' };
+      case 'HR_PAYROLL_USER':
+        return { label: 'HR Payroll User', className: 'badge-info' };
       case 'HR_STAFF':
         return { label: 'HR Staff', className: 'badge-warning' };
       default:

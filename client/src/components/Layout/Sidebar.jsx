@@ -10,7 +10,8 @@ import {
   Receipt,
   Layers,
   UserCircle,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function Sidebar({ collapsed, setCollapsed }) {
@@ -18,10 +19,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const role = user?.role;
   const isEmployee = role === 'EMPLOYEE';
 
-  const isHR = hasRole(['SUPER_ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
-  const isHRManager = hasRole(['SUPER_ADMIN', 'HR_MANAGER']);
-  const isPayroll = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER', 'PAYROLL_USER']);
-  const isPayrollManager = hasRole(['SUPER_ADMIN', 'PAYROLL_MANAGER']);
+  const isAdmin = hasRole(['SUPER_ADMIN', 'ADMIN']);
+  const isHRManager = hasRole(['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER']);
+  const isPayrollManager = hasRole(['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER']);
+  const isPayrollUser = hasRole(['SUPER_ADMIN', 'ADMIN', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']);
+  const isHRStaffOrAbove = hasRole(['SUPER_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_STAFF', 'PAYROLL_MANAGER', 'HR_PAYROLL_MANAGER', 'PAYROLL_USER', 'HR_PAYROLL_USER']);
 
   const navSections = [
     {
@@ -34,20 +36,28 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     {
       title: isEmployee ? 'MY WORKSPACE' : 'CORE HR',
       items: [
-        { path: '/employees', label: 'Employees Directory', icon: Users, color: '#7c3aed', bg: '#f5f3ff', show: isHR },
-        { path: '/contracts', label: 'Contracts & Terms', icon: FileText, color: '#0284c7', bg: '#f0f9ff', show: isHRManager || isPayrollManager },
+        { path: '/employees', label: 'Employees Directory', icon: Users, color: '#7c3aed', bg: '#f5f3ff', show: !isEmployee && isHRStaffOrAbove },
+        { path: '/contracts', label: 'Contracts & Terms', icon: FileText, color: '#0284c7', bg: '#f0f9ff', show: !isEmployee && (isHRManager || isPayrollUser) },
         { path: '/attendance', label: isEmployee ? 'My Attendance' : 'Attendance & Clock', icon: Clock, color: '#059669', bg: '#ecfdf5', show: true },
         { path: '/leave', label: isEmployee ? 'My Leaves & Requests' : 'Leave & Time Off', icon: CalendarCheck, color: '#d97706', bg: '#fffbeb', show: true },
       ]
     },
-    {
-      title: isEmployee ? 'MY COMPENSATION' : 'PAYROLL & FINANCE',
+    // Payroll & Finance: Accessible only to HR Payroll User, HR Payroll Manager, and Admin. Strictly hidden from HR Manager and Employee.
+    ...(isPayrollUser ? [{
+      title: 'PAYROLL & FINANCE',
       items: [
-        { path: '/payroll', label: 'Payroll Cycles', icon: Calculator, color: '#2563eb', bg: '#eff6ff', show: isPayroll },
-        { path: '/payslips', label: isEmployee ? 'My Payslips' : 'Employee Payslips', icon: Receipt, color: '#e11d48', bg: '#fff1f2', show: true },
-        { path: '/salary-structures', label: 'Salary Structures', icon: Layers, color: '#c026d3', bg: '#fdf4ff', show: isPayrollManager || isHRManager },
+        { path: '/payroll', label: 'Payroll Cycles', icon: Calculator, color: '#2563eb', bg: '#eff6ff', show: true },
+        { path: '/payslips', label: 'Employee Payslips', icon: Receipt, color: '#e11d48', bg: '#fff1f2', show: true },
+        { path: '/salary-structures', label: 'Salary Structures', icon: Layers, color: '#c026d3', bg: '#fdf4ff', show: true },
       ]
-    },
+    }] : []),
+    // Administration: Accessible strictly to Admin (SUPER_ADMIN)
+    ...(isAdmin ? [{
+      title: 'ADMINISTRATION',
+      items: [
+        { path: '/users', label: 'User & Roles Admin', icon: ShieldCheck, color: '#ea580c', bg: '#fff7ed', show: true },
+      ]
+    }] : []),
     ...(isEmployee ? [] : [{
       title: 'SELF SERVICE',
       items: [
