@@ -475,27 +475,32 @@ ${audit.recommendations.map(r => `- ${r}`).join('\n')}
       };
     }
 
-    // 5. Organizational & Payroll Context (For HR / Payroll / Super Admin)
+    // 5. Organizational & Payroll Context
     let orgContext = null;
     let payrollContext = null;
 
+    const [empCount, deptCounts] = await Promise.all([
+      prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+      prisma.department.findMany({
+        include: { _count: { select: { employees: true } } }
+      }),
+    ]);
+
+    let activeContracts = 0;
+    let pendingLeavesCount = 0;
     if (isHR || isPayroll || isSuperAdmin) {
-      const [empCount, deptCounts, activeContracts, pendingLeavesCount] = await Promise.all([
-        prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
-        prisma.department.findMany({
-          include: { _count: { select: { employees: true } } }
-        }),
+      [activeContracts, pendingLeavesCount] = await Promise.all([
         prisma.contract.count({ where: { status: 'ACTIVE' } }),
         prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       ]);
-
-      orgContext = {
-        totalActiveStaff: empCount,
-        departments: deptCounts.map(d => ({ name: d.name, staffCount: d._count.employees })),
-        activeContractsCount: activeContracts,
-        pendingLeavesCount,
-      };
     }
+
+    orgContext = {
+      totalActiveStaff: empCount,
+      departments: deptCounts.map(d => ({ name: d.name, staffCount: d._count.employees })),
+      activeContractsCount: activeContracts,
+      pendingLeavesCount,
+    };
 
     if (isPayroll || isSuperAdmin) {
       const latestPayrun = await prisma.payrun.findFirst({
@@ -1246,8 +1251,25 @@ ${(ctx.isPayroll || ctx.isSuperAdmin) ? `- **Base Monthly Wage**: **₹${empWage
       }
     }
 
-    // ── 10. HR: Organization Headcount & Departments ──
-    if (ctx.isHR && (q.includes('headcount') || q.includes('total staff') || q.includes('department distribution'))) {
+    // ── 10. HR / ADMIN / ORG: Headcount, Total Employees & Department Distribution ──
+    const isHeadcountQuery = 
+      q.includes('headcount') ||
+      q.includes('head count') ||
+      q.includes('total staff') ||
+      q.includes('department distribution') ||
+      q.includes('number of employee') ||
+      q.includes('total employee') ||
+      q.includes('count of employee') ||
+      q.includes('how many employee') ||
+      q.includes('how many staff') ||
+      q.includes('employee count') ||
+      q.includes('workforce') ||
+      q.includes('active employee') ||
+      q.includes('all employee') ||
+      q.includes('departments') ||
+      q.includes('company size');
+
+    if ((ctx.isHR || ctx.isPayroll || ctx.isSuperAdmin) && isHeadcountQuery) {
       const depts = ctx.orgContext?.departments || [];
       const deptRows = depts.map(d => `- **${d.name}**: **${d.staffCount} staff members**`).join('\n');
 
@@ -1259,10 +1281,241 @@ ${(ctx.isPayroll || ctx.isSuperAdmin) ? `- **Base Monthly Wage**: **₹${empWage
 
 ---
 #### Department Breakdown
-${deptRows}`,
+${deptRows || 'No departments recorded.'}`,
         suggestedActions: [
           { label: '👥 Open Employee Directory', path: '/employees' },
           { label: '🌴 Review Pending Leaves', path: '/leave' },
+          { label: '⏰ Company Attendance Today', query: 'What is company attendance today?' },
+        ],
+      };
+    }
+
+    if (isHeadcountQuery) {
+      return {
+        answer: `### 🏢 Organization Overview
+PeoplePay360 currently employs **${ctx.orgContext?.totalActiveStaff || 0} active employees** across **${ctx.orgContext?.departments?.length || 0} departments**.
+
+For detailed employee records, please consult the **[Employee Directory](/employees)**.`,
+        suggestedActions: this.getSuggestedActionsForRole(ctx),
+      };
+    }
+
+    // ── 10B. HR / ADMIN: Company Attendance Today ──
+    if (
+      (ctx.isHR || ctx.isSuperAdmin) && (
+        q.includes('company attendance') ||
+        q.includes('organization attendance') ||
+        q.includes('attendance today') ||
+        q.includes('attendance across company') ||
+        q.includes('company-wide attendance')
+      )
+    ) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const [todayPunches, totalActive] = await Promise.all([
+        prisma.attendance.findMany({
+          where: { date: { gte: todayStart, lte: todayEnd } },
+          include: { employee: true },
+        }),
+        prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+      ]);
+
+      let pres = 0, late = 0, abs = 0, half = 0;
+      todayPunches.forEach(p => {
+        if (p.status === 'PRESENT') pres++;
+        else if (p.status === 'LATE') late++;
+        else if (p.status === 'ABSENT') abs++;
+        else if (p.status === 'HALF_DAY') half++;
+      });
+      const checkedIn = pres + late + half;
+      const notCheckedIn = Math.max(0, totalActive - checkedIn - abs);
+
+      return {
+        answer: `### ⏰ Organization Attendance Today
+Real-time workforce attendance metrics across all departments:
+
+- **Total Active Workforce**: **${totalActive} staff**
+- **Checked In Today**: **${checkedIn} employees** (${Math.round((checkedIn / (totalActive || 1)) * 100)}% attendance rate)
+  - 🟢 **On Time (Present)**: **${pres} staff**
+  - 🟡 **Late Arrivals**: **${late} staff**
+  - 🟠 **Half Day**: **${half} staff**
+  - 🔴 **Marked Absent**: **${abs} staff**
+  - ⚪ **Not Checked In Yet**: **${notCheckedIn} staff**
+
+---
+You can monitor live punch times and biometric devices in the **[Attendance Portal](/attendance)**.`,
+        suggestedActions: [
+          { label: '⏰ Open Attendance Portal', path: '/attendance' },
+          { label: '📊 Organization Headcount', query: 'Show organization headcount and department distribution' },
+          { label: '🌴 All Pending Leaves', query: 'Show all pending leave requests' },
+        ],
+      };
+    }
+
+    // ── 10C. HR / ADMIN: All Pending Leave Requests Across Company ──
+    if (
+      (ctx.isHR || ctx.isSuperAdmin) && (
+        q.includes('all pending leave') ||
+        q.includes('pending leave requests') ||
+        q.includes('pending leaves across') ||
+        q.includes('company pending leave') ||
+        q.includes('all leave request') ||
+        (q.includes('pending') && q.includes('leave'))
+      )
+    ) {
+      const pendingLeaves = await prisma.leaveRequest.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          employee: { include: { department: true } },
+          leaveType: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      const leaveRows = pendingLeaves.length
+        ? pendingLeaves.map((l, i) => `${i + 1}. **${l.employee ? `${l.employee.firstName} ${l.employee.lastName}` : 'Staff Member'}** (\`${l.employee?.employeeCode || 'EMP'}\` - ${l.employee?.department?.name || 'General'})\n   - **${l.leaveType?.name || 'Leave'}**: ${l.totalDays || 1} day(s) (${new Date(l.startDate).toLocaleDateString('en-IN')} to ${new Date(l.endDate).toLocaleDateString('en-IN')})\n   - *Reason*: ${l.reason || 'Personal matters'}`).join('\n\n')
+        : '🎉 **No pending leave requests** currently across the organization.';
+
+      return {
+        answer: `### 🌴 Organization Pending Leave Requests (${pendingLeaves.length} Awaiting Review)
+${leaveRows}
+
+You can review, approve, or reject employee requests in the **[Leave Management](/leave)** section.`,
+        suggestedActions: [
+          { label: '🌴 Open Leave Approvals', path: '/leave' },
+          { label: '📊 Headcount Overview', query: 'Show organization headcount and department distribution' },
+          { label: '⏰ Today\'s Attendance', query: 'What is company attendance today?' },
+        ],
+      };
+    }
+
+    // ── 10D. HR / PAYROLL / ADMIN: Department Cost Breakdown ──
+    if (
+      (ctx.isHR || ctx.isPayroll || ctx.isSuperAdmin) && (
+        q.includes('dept cost') ||
+        q.includes('department cost') ||
+        q.includes('department breakdown') ||
+        q.includes('department-wise') ||
+        q.includes('dept breakdown')
+      )
+    ) {
+      const depts = await prisma.department.findMany({
+        include: {
+          employees: {
+            where: { employmentStatus: 'ACTIVE' },
+            include: {
+              contracts: { where: { status: 'ACTIVE' }, take: 1 },
+              payslips: { orderBy: { createdAt: 'desc' }, take: 1 },
+            },
+          },
+        },
+      });
+
+      const deptSummary = depts.map(d => {
+        const staff = d.employees || [];
+        const totalDeptWage = staff.reduce((sum, e) => {
+          const wage = Number(e.contracts?.[0]?.wage || e.contracts?.[0]?.basicWage || e.payslips?.[0]?.netSalary || 0);
+          return sum + wage;
+        }, 0);
+        return `- **${d.name}**: **${staff.length} staff** | Approx. Monthly Payroll: **₹${totalDeptWage.toLocaleString('en-IN')}**`;
+      }).join('\n');
+
+      return {
+        answer: `### 🏢 Department Workforce & Payroll Distribution
+${deptSummary || 'No departmental records found.'}
+
+---
+For individual salary allocations and cost center ledger entries, visit **[Salary Structures](/salary-structures)**.`,
+        suggestedActions: [
+          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+          { label: '👥 Employee Directory', path: '/employees' },
+          { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+        ],
+      };
+    }
+
+    // ── 10E. PAYROLL / ADMIN / HR: Audit Anomalies & Wage Spikes ──
+    if (
+      (ctx.isPayroll || ctx.isSuperAdmin || ctx.isHR) && (
+        q.includes('anomaly') ||
+        q.includes('anomalies') ||
+        q.includes('outlier') ||
+        q.includes('wage spike') ||
+        q.includes('audit score') ||
+        q.includes('health score')
+      )
+    ) {
+      const latestPayrun = await prisma.payrun.findFirst({
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!latestPayrun) {
+        return {
+          answer: `### 🛡️ Payroll Audit & Anomaly Detection
+No payroll runs found in the system to audit. Create and calculate a payrun first.`,
+          suggestedActions: [{ label: 'View Payruns', path: '/payroll' }],
+        };
+      }
+
+      const audit = await this.auditPayrunAnomalies(latestPayrun.id);
+      const anomalyRows = (audit.anomalies || []).slice(0, 5).map((a, i) => {
+        const sevBadge = a.severity === 'HIGH' ? '🔴 HIGH' : a.severity === 'MEDIUM' ? '🟡 MEDIUM' : '🔵 LOW';
+        return `${i + 1}. [${sevBadge}] **${a.employeeName}** (\`${a.employeeCode}\`)\n   - *Issue*: **${a.title}**\n   - *Details*: ${a.description}\n   - *Action*: ${a.actionRecommendation}`;
+      }).join('\n\n');
+
+      return {
+        answer: `### 🛡️ Payroll Health & Audit Report: ${audit.payrunName}
+- **Health Score**: **${audit.healthScore}/100** (\`${audit.riskLevel} RISK\`)
+- **Total Employees Audited**: **${audit.totalEmployees} staff**
+- **Anomalies Flagged**: **${audit.anomaliesCount} issues** (${audit.highRiskCount} High Risk, ${audit.mediumRiskCount} Medium Risk)
+
+${anomalyRows ? `---
+#### ⚠️ Top Flagged Outliers
+${anomalyRows}` : '✅ **No anomalies or financial outliers detected in this cycle.**'}
+
+---
+#### 💡 Recommendations
+${(audit.recommendations || []).map(r => `- ${r}`).join('\n')}`,
+        suggestedActions: [
+          { label: 'View Payrun Details', path: '/payroll' },
+          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+          { label: '🌟 Top 5 Earners', query: 'Who are the top 5 highest earners?' },
+        ],
+      };
+    }
+
+    // ── 10F. PAYROLL / ADMIN: Executive Briefing / Leadership Summary ──
+    if (
+      (ctx.isPayroll || ctx.isSuperAdmin) && (
+        q.includes('executive summary') ||
+        q.includes('briefing memo') ||
+        q.includes('executive briefing') ||
+        q.includes('leadership summary')
+      )
+    ) {
+      const latestPayrun = await prisma.payrun.findFirst({
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!latestPayrun) {
+        return {
+          answer: `### 📑 Executive Briefing Memo
+No completed payruns found to generate an executive summary.`,
+          suggestedActions: [{ label: 'View Payruns', path: '/payroll' }],
+        };
+      }
+
+      const summary = await this.generateExecutiveSummary(latestPayrun.id);
+      return {
+        answer: summary.summaryMarkdown,
+        suggestedActions: [
+          { label: 'View Payrun Details', path: '/payroll' },
+          { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+          { label: '💰 Monthly Spend', query: 'What is our total payroll expenditure this month?' },
         ],
       };
     }
