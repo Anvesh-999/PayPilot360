@@ -4,7 +4,13 @@ const { ZodError } = require('zod');
  * Global error handler middleware.
  */
 const errorHandler = (err, req, res, next) => {
-  console.error(`[ERROR] ${req.method} ${req.path}:`, err);
+  // Only log full stack trace for 500 server errors; keep 4xx operational warnings concise
+  const isOperational = (err instanceof ZodError) || (err.statusCode && err.statusCode < 500);
+  if (!isOperational) {
+    console.error(`[ERROR] ${req.method} ${req.path}:`, err);
+  } else {
+    console.warn(`[WARN] ${req.method} ${req.path} (${err.statusCode || 400}): ${err.message}`);
+  }
 
   // Zod validation errors
   if (err instanceof ZodError) {

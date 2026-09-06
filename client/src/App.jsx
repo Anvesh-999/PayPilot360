@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
 import AppLayout from './layouts/AppLayout';
 import ProtectedRoute from './components/Common/ProtectedRoute';
 
@@ -19,6 +20,32 @@ import UserManagementPage from './pages/Admin/UserManagementPage';
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#ffffff',
+            color: '#0f172a',
+            border: '1px solid #e2e8f0',
+            fontSize: '0.875rem',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px -4px rgba(15, 23, 42, 0.1)',
+            fontWeight: 500,
+          },
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#ecfdf5',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#f43f5e',
+              secondary: '#fff1f2',
+            },
+          },
+        }}
+      />
       <BrowserRouter>
         <Routes>
           {/* Public Auth Route */}

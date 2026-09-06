@@ -10,32 +10,6 @@ export default function AppLayout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8fafc' }}>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          style: {
-            background: '#ffffff',
-            color: '#0f172a',
-            border: '1px solid #e2e8f0',
-            fontSize: '0.875rem',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px -4px rgba(15, 23, 42, 0.1)',
-            fontWeight: 500,
-          },
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#ecfdf5',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: '#f43f5e',
-              secondary: '#fff1f2',
-            },
-          },
-        }}
-      />
       {/* Persistent Sidebar */}
       <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 

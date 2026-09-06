@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Sparkles, Receipt } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Sparkles, Receipt, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@peoplepay360.com');
   const [password, setPassword] = useState('Password@123');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -33,7 +34,9 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage(null);
     if (!email || !password) {
+      setErrorMessage('Please enter both your email address and password.');
       toast.error('Please fill in all fields');
       return;
     }
@@ -45,7 +48,9 @@ export default function LoginPage() {
       const target = getDestination(userData?.role);
       navigate(target, { replace: true });
     } catch (err) {
-      toast.error(err.response?.data?.error?.message || 'Invalid email or password');
+      const msg = err.response?.data?.error?.message || 'Invalid email or password. Please try again.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -54,6 +59,7 @@ export default function LoginPage() {
   const handleQuickFill = (demoEmail, demoPass) => {
     setEmail(demoEmail);
     setPassword(demoPass);
+    setErrorMessage(null);
   };
 
   return (
@@ -134,6 +140,24 @@ export default function LoginPage() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {errorMessage && (
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: '10px',
+              backgroundColor: '#fff1f2',
+              border: '1px solid #fecdd3',
+              color: '#be123c',
+              fontSize: '0.84rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 2px 6px rgba(225, 29, 72, 0.08)'
+            }}>
+              <AlertCircle size={18} color="#e11d48" style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 500 }}>{errorMessage}</span>
+            </div>
+          )}
+
           <div>
             <label htmlFor="login-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '7px' }}>
               Corporate Email
@@ -147,7 +171,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (errorMessage) setErrorMessage(null); }}
                 placeholder="name@peoplepay360.com"
                 className="form-input"
                 style={{ paddingLeft: '42px', height: '46px', fontSize: '0.92rem' }}
@@ -168,7 +192,7 @@ export default function LoginPage() {
                 type="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); if (errorMessage) setErrorMessage(null); }}
                 placeholder="••••••••"
                 className="form-input"
                 style={{ paddingLeft: '42px', height: '46px', fontSize: '0.92rem' }}
