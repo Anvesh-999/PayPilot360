@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Receipt, AlertCircle, Eye, EyeOff, RotateCcw } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Receipt, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -64,12 +64,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClearSession = () => {
-    localStorage.clear();
-    toast.success('Session storage cleared. Try logging in again.');
-    setErrorMessage(null);
   };
 
   const handleQuickFill = (demoEmail, demoPass) => {
@@ -256,32 +250,6 @@ export default function LoginPage() {
               </>
             )}
           </button>
-
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2px' }}>
-            <button
-              type="button"
-              onClick={handleClearSession}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#94a3b8',
-                fontSize: '0.76rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                transition: 'color 0.15s ease'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#64748b'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
-              title="Clear cached browser tokens and login state"
-            >
-              <RotateCcw size={12} />
-              <span>Reset session cache</span>
-            </button>
-          </div>
         </form>
 
         {/* Demo Roles Quick Fill */}
