@@ -3,13 +3,31 @@ import { Sparkles, X, Send, Bot, User, Copy, Check, ChevronRight, AlertTriangle,
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AICopilotDrawer() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const navigate = useNavigate();
+
+  const isEmployee = user?.role?.name === 'EMPLOYEE' || user?.roleName === 'EMPLOYEE';
+
+  const defaultSuggestedActions = isEmployee ? [
+    { label: '💰 Check My Salary', query: 'What is my salary?' },
+    { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
+    { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
+    { label: '🧾 Explain TDS', query: 'Explain TDS tax deduction' },
+    { label: '🏛️ Explain PF', query: 'Explain PF deduction' },
+  ] : [
+    { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+    { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
+    { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+    { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
+    { label: '📑 Executive Briefing Memo', query: 'Generate executive summary for leadership' },
+  ];
 
   const [messages, setMessages] = useState([
     {
@@ -18,15 +36,24 @@ export default function AICopilotDrawer() {
 I'm your intelligent workforce and payroll copilot. I continuously monitor cycle expenditures, flag financial and compliance outliers, and answer questions about company compensation.
 
 **How can I assist you today?**`,
-      suggestedActions: [
-        { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
-        { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
-        { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
-        { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
-        { label: '📑 Executive Briefing Memo', query: 'Generate executive summary for leadership' },
-      ],
+      suggestedActions: defaultSuggestedActions,
     },
   ]);
+
+  // Update initial message suggestions when user loads
+  useEffect(() => {
+    if (user) {
+      setMessages((prev) => {
+        if (prev.length === 1 && prev[0].role === 'assistant') {
+          return [{
+            ...prev[0],
+            suggestedActions: defaultSuggestedActions
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [user?.role?.name, user?.roleName]);
 
   const messagesEndRef = useRef(null);
 
@@ -103,84 +130,210 @@ I'm your intelligent workforce and payroll copilot. I continuously monitor cycle
     }
   };
 
-  // Basic markdown-like parser for clean rendering
+  // Enhanced markdown parser with HTML tables and rich inline styling
   const renderFormattedContent = (content) => {
-    const lines = content.split('\n');
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.88rem', lineHeight: 1.55 }}>
-        {lines.map((line, idx) => {
-          if (line.startsWith('### ')) {
-            return (
-              <h4 key={idx} style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 2px 0' }}>
-                {line.replace('### ', '')}
-              </h4>
-            );
-          }
-          if (line.startsWith('# ')) {
-            return (
-              <h3 key={idx} style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '6px 0 2px 0' }}>
-                {line.replace('# ', '')}
-              </h3>
-            );
-          }
-          if (line.startsWith('---')) {
-            return <hr key={idx} style={{ border: 'none', borderTop: '1px solid #e5e3ec', margin: '6px 0' }} />;
-          }
-          if (line.startsWith('> ')) {
-            return (
-              <div
-                key={idx}
+    const rawLines = (content || '').split('\n');
+    const elements = [];
+    let i = 0;
+
+    while (i < rawLines.length) {
+      const line = rawLines[i];
+
+      // Table block parsing
+      if (line.trim().startsWith('|')) {
+        const tableLines = [];
+        while (i < rawLines.length && rawLines[i].trim().startsWith('|')) {
+          tableLines.push(rawLines[i].trim());
+          i++;
+        }
+
+        if (tableLines.length >= 2) {
+          const parseRow = (r) =>
+            r
+              .split('|')
+              .map((c) => c.trim())
+              .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+          const headerCells = parseRow(tableLines[0]);
+          const dataRows = tableLines.slice(1).filter((l) => !l.includes('---')).map(parseRow);
+
+          elements.push(
+            <div
+              key={`table-${i}`}
+              style={{
+                overflowX: 'auto',
+                margin: '8px 0',
+                borderRadius: '8px',
+                border: '1px solid #e5e3ec',
+              }}
+            >
+              <table
                 style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#f8fafc',
-                  borderLeft: '3px solid var(--primary)',
-                  borderRadius: '4px',
-                  color: '#334155',
-                  fontSize: '0.82rem',
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: '0.78rem',
+                  backgroundColor: '#ffffff',
                 }}
               >
-                {line.replace('> ', '')}
-              </div>
-            );
-          }
-          if (line.startsWith('- ') || line.startsWith('• ')) {
-            const clean = line.replace(/^[-•]\s+/, '');
-            return (
-              <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '4px' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>•</span>
-                <span dangerouslySetInnerHTML={{ __html: formatBold(clean) }} />
-              </div>
-            );
-          }
-          if (/^\d+\.\s+/.test(line)) {
-            const num = line.match(/^(\d+)\.\s+/)[1];
-            const clean = line.replace(/^\d+\.\s+/, '');
-            return (
-              <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '4px' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 700, minWidth: '16px' }}>{num}.</span>
-                <span dangerouslySetInnerHTML={{ __html: formatBold(clean) }} />
-              </div>
-            );
-          }
-          if (line.startsWith('|')) {
-            // simple table row
-            return (
-              <div key={idx} style={{ fontFamily: 'monospace', fontSize: '0.78rem', backgroundColor: '#faf9fd', padding: '3px 8px', borderRadius: '4px' }}>
-                {line}
-              </div>
-            );
-          }
-          if (!line.trim()) {
-            return <div key={idx} style={{ height: '4px' }} />;
-          }
-          return <p key={idx} style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: formatBold(line) }} />;
-        })}
+                <thead style={{ backgroundColor: '#f6f5fb' }}>
+                  <tr>
+                    {headerCells.map((h, cIdx) => (
+                      <th
+                        key={cIdx}
+                        style={{
+                          padding: '7px 10px',
+                          textAlign: 'left',
+                          fontWeight: 700,
+                          color: '#181837',
+                          borderBottom: '1px solid #e5e3ec',
+                          whiteSpace: 'nowrap',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: formatInline(h) }}
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {dataRows.map((row, rIdx) => (
+                    <tr
+                      key={rIdx}
+                      style={{
+                        backgroundColor: rIdx % 2 === 0 ? '#ffffff' : '#faf9fd',
+                        borderBottom: '1px solid #f1f0f7',
+                      }}
+                    >
+                      {row.map((cell, cIdx) => (
+                        <td
+                          key={cIdx}
+                          style={{ padding: '6px 10px', color: '#334155' }}
+                          dangerouslySetInnerHTML={{ __html: formatInline(cell) }}
+                        />
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+          continue;
+        }
+      }
+
+      if (line.startsWith('### ')) {
+        elements.push(
+          <h4
+            key={`h4-${i}`}
+            style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '6px 0 2px 0' }}
+          >
+            {line.replace('### ', '')}
+          </h4>
+        );
+      } else if (line.startsWith('## ')) {
+        elements.push(
+          <h3
+            key={`h3-${i}`}
+            style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '8px 0 3px 0' }}
+          >
+            {line.replace('## ', '')}
+          </h3>
+        );
+      } else if (line.startsWith('# ')) {
+        elements.push(
+          <h2
+            key={`h2-${i}`}
+            style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: '10px 0 4px 0' }}
+          >
+            {line.replace('# ', '')}
+          </h2>
+        );
+      } else if (line.startsWith('---')) {
+        elements.push(
+          <hr
+            key={`hr-${i}`}
+            style={{ border: 'none', borderTop: '1px solid #e5e3ec', margin: '6px 0' }}
+          />
+        );
+      } else if (line.startsWith('> ')) {
+        elements.push(
+          <div
+            key={`quote-${i}`}
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#f8fafc',
+              borderLeft: '3px solid #5554aa',
+              borderRadius: '4px',
+              color: '#334155',
+              fontSize: '0.82rem',
+              margin: '3px 0',
+            }}
+          >
+            <span dangerouslySetInnerHTML={{ __html: formatInline(line.replace('> ', '')) }} />
+          </div>
+        );
+      } else if (line.startsWith('- ') || line.startsWith('• ') || line.startsWith('* ')) {
+        const clean = line.replace(/^[-•*]\s+/, '');
+        elements.push(
+          <div
+            key={`li-${i}`}
+            style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '4px' }}
+          >
+            <span style={{ color: '#5554aa', fontWeight: 700, lineHeight: 1.4 }}>•</span>
+            <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: formatInline(clean) }} />
+          </div>
+        );
+      } else if (/^\d+\.\s+/.test(line)) {
+        const num = line.match(/^(\d+)\.\s+/)[1];
+        const clean = line.replace(/^\d+\.\s+/, '');
+        elements.push(
+          <div
+            key={`num-${i}`}
+            style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginLeft: '4px' }}
+          >
+            <span
+              style={{ color: '#5554aa', fontWeight: 700, minWidth: '16px', lineHeight: 1.4 }}
+            >
+              {num}.
+            </span>
+            <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: formatInline(clean) }} />
+          </div>
+        );
+      } else if (!line.trim()) {
+        elements.push(<div key={`space-${i}`} style={{ height: '4px' }} />);
+      } else {
+        elements.push(
+          <p
+            key={`p-${i}`}
+            style={{ margin: 0 }}
+            dangerouslySetInnerHTML={{ __html: formatInline(line) }}
+          />
+        );
+      }
+
+      i++;
+    }
+
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          fontSize: '0.88rem',
+          lineHeight: 1.55,
+        }}
+      >
+        {elements}
       </div>
     );
   };
 
-  const formatBold = (text) => {
-    return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  const formatInline = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(
+        /`([^`]+)`/g,
+        '<code style="background-color: #f1f0f7; padding: 1px 5px; border-radius: 4px; font-family: monospace; font-size: 0.88em; color: #5554aa;">$1</code>'
+      );
   };
 
   return (

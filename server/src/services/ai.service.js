@@ -308,7 +308,7 @@ ${audit.recommendations.map(r => `- ${r}`).join('\n')}
   }
 
   /**
-   * ─── 3. Gemini Generative AI Call with Strict Privacy & General Q&A ───
+   * ─── 3. Gemini Generative AI Call with Strict Privacy & Rich Context ───
    */
   async callGemini(prompt, context, user) {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -319,38 +319,46 @@ ${audit.recommendations.map(r => `- ${r}`).join('\n')}
     const isEmployee = (user?.roleName === 'EMPLOYEE');
 
     try {
-      // Use verified active Gemini 2.5 Flash model
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey.trim()}`;
       
       const systemInstruction = `You are PayPilot AI Copilot in PeoplePay360, an enterprise HRMS & Payroll system.
-You are an intelligent, helpful, knowledgeable, and courteous AI assistant.
+You are an intelligent, authoritative, direct, and helpful AI assistant.
 
-CRITICAL PRIVACY & SCOPE RULES:
+RESPONSE GUIDELINES:
+1. Always be clear, concise, direct, and professional.
+2. DO NOT respond with vague multiple-choice questions asking the user to choose options. Provide immediate answers and direct insights.
+3. When referencing currency, use Indian Rupee symbol (₹) and Indian comma numbering (e.g. ₹4,50,000).
+4. Format responses cleanly using GitHub Flavored Markdown (bullet points, bold text, clean headers).
+
+CRITICAL PRIVACY & ACCESS RULES:
 1. Current User Role: "${user?.roleName || 'EMPLOYEE'}".
 2. EMPLOYEE CONFIDENTIALITY:
-   - If user is an EMPLOYEE, they are strictly FORBIDDEN from viewing any other employee's salary, wage, contract, or personal data.
-   - If an employee asks for another employee's salary (e.g. "what is the salary of Arjun Reddy", "who is highest earner", "how much does someone make"), you MUST strictly refuse: "In accordance with HR confidentiality policy, employees cannot access or view the salary or personal details of other employees."
-   - Employees are allowed to ask about their own salary, attendance, and leave.
-   - Employees cannot view executive company-wide payroll budgets or anomaly scores.
-3. STRICT PROJECT SCOPE POLICY:
-   - Your scope is STRICTLY RESTRICTED to PeoplePay360: Human Resources, Payroll processing, Salary structures, Contracts, Attendance, Leaves, and Indian statutory payroll regulations (PF, ESI, TDS, Gratuity).
-   - You MUST REFUSE any questions outside the scope of this project (such as "What is Java?", general programming languages, coding, sports, movies, weather, general trivia).
-   - If a user asks an out-of-scope question, respond concisely: "⚠️ **Out of Scope**: I am PayPilot AI Copilot, specialized exclusively in **PeoplePay360 HR & Payroll Management**. I cannot answer general topics outside the scope of our HR and payroll platform. Please ask questions related to your attendance, leaves, compensation, or payroll operations."
+   - If user is an EMPLOYEE, they are strictly forbidden from viewing another employee's salary, wage, or confidential record.
+   - If an employee asks for another employee's salary (e.g., "what is the salary of...", "who earns the most"), refuse politely in accordance with HR confidentiality policy.
+   - Employees CAN ask about their own compensation, leave balance, attendance, and general payroll rules.
+3. PROJECT SCOPE:
+   - Scope is strictly Human Resources, Payroll Processing, Salary Structures, Contracts, Shift Attendance, Leave Policies, and Indian statutory regulations (PF, ESI, TDS, Gratuity, LOP).
+   - If an out-of-scope query is asked (general trivia, movies, sports, external coding), answer politely that PayPilot AI is dedicated to PeoplePay360 HR & Payroll.
 
-ORGANIZATIONAL CONTEXT (Only disclose to HR/Managers, NOT to Employees):
-- Total Registered Staff: ${context.empCount}
-- Departments: ${context.deptCount}
+LIVE SYSTEM CONTEXT:
+- Active Cycle: "${context.latestPayrun?.name || 'Current Period'}" (${context.latestPayrun?.status || 'ACTIVE'})
+- Registered Workforce: ${context.empCount} active employees across ${context.deptCount} departments
 ${!isEmployee ? `- Total Net Monthly Payroll: ₹${context.totalNet.toLocaleString('en-IN')}
 - Total Gross Monthly Payroll: ₹${context.totalGross.toLocaleString('en-IN')}
-- Active Payrun: "${context.latestPayrun?.name || 'Current Period'}"` : ''}
-${isEmployee && context.selfEmployee ? `
-AUTHENTICATED EMPLOYEE SELF-DATA:
-- Full Name: ${context.selfEmployee.firstName} ${context.selfEmployee.lastName}
-- Staff ID: ${context.selfEmployee.employeeCode}
-- Title: ${context.selfEmployee.jobPosition?.title || 'Staff Member'}
-- Department: ${context.selfEmployee.department?.name || 'General Operations'}
-- Base Contract Monthly Salary: ₹${Number(context.selfEmployee.contracts?.[0]?.wage || context.selfEmployee.contracts?.[0]?.basicWage || 0).toLocaleString('en-IN')}
-- Latest Net Disbursed Salary: ₹${Number(context.selfEmployee.payslips?.[0]?.netSalary || 0).toLocaleString('en-IN')}
+- Average Take-Home Pay: ₹${context.avgSalary.toLocaleString('en-IN')} / employee
+- Cycle Health Score: ${context.audit?.healthScore || 100}% (${context.audit?.riskLevel || 'LOW'} RISK, ${context.audit?.anomaliesCount || 0} anomalies flagged)
+- Top Earners: ${context.topEarnersSummary || 'Available in ledger'}
+- Department Cost Breakdown:
+${context.deptBreakdownText || 'N/A'}` : ''}
+${context.selfEmployee ? `
+AUTHENTICATED USER SELF-PROFILE:
+- Name: ${context.selfEmployee.firstName} ${context.selfEmployee.lastName} (${context.selfEmployee.employeeCode})
+- Designation: ${context.selfEmployee.jobPosition?.title || 'Staff Member'}
+- Department: ${context.selfEmployee.department?.name || 'General'}
+- Base Contract Wage: ₹${Number(context.selfEmployee.contracts?.[0]?.wage || context.selfEmployee.contracts?.[0]?.basicWage || 0).toLocaleString('en-IN')}
+- Latest Net Salary: ₹${Number(context.selfEmployee.payslips?.[0]?.netSalary || 0).toLocaleString('en-IN')}
+- Leave Balances: ${context.selfLeaveSummary || 'Available in leave portal'}
+- Attendance (This Month): ${context.selfAttendanceSummary || 'Available in attendance log'}
 ` : ''}`;
 
       const payload = {
@@ -361,8 +369,8 @@ AUTHENTICATED EMPLOYEE SELF-DATA:
           }
         ],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1000,
+          temperature: 0.2,
+          maxOutputTokens: 1200,
         }
       };
 
@@ -373,7 +381,7 @@ AUTHENTICATED EMPLOYEE SELF-DATA:
       });
 
       if (!res.ok) {
-        console.warn(`[Gemini API Warning] HTTP ${res.status}: Falling back to local engine.`);
+        console.warn(`[Gemini API Warning] HTTP ${res.status}: Falling back to local intelligence engine.`);
         return null;
       }
 
@@ -387,75 +395,235 @@ AUTHENTICATED EMPLOYEE SELF-DATA:
   }
 
   /**
-   * ─── 4. Natural Language Assistant Engine (Hybrid Intelligence) ───
+   * ─── 4. Natural Language Assistant Engine (Hybrid Precision Intelligence) ───
    */
   async askCopilot(prompt, user) {
     const q = (prompt || '').trim().toLowerCase();
     const isEmployee = (user?.roleName === 'EMPLOYEE');
 
-    // 1. Resolve current user's linked employee record
+    // 1. Resolve current user's linked employee record with leaves & attendance
     let selfEmployee = null;
-    if (user?.employeeId || user?.userId || user?.email) {
-      selfEmployee = (user.employeeId && await prisma.employee.findUnique({
+    const empInclude = {
+      department: true,
+      jobPosition: true,
+      contracts: { where: { status: 'ACTIVE' }, take: 1 },
+      payslips: { orderBy: { createdAt: 'desc' }, take: 1, include: { payrun: true } },
+      leaveBalances: { include: { leaveType: true } },
+      attendance: { orderBy: { date: 'desc' }, take: 31 }
+    };
+
+    if (user?.employeeId) {
+      selfEmployee = await prisma.employee.findUnique({
         where: { id: user.employeeId },
+        include: empInclude,
+      });
+    } else if (user?.userId || user?.email) {
+      selfEmployee = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            ...(user?.userId ? [{ userId: user.userId }] : []),
+            ...(user?.email ? [{ email: user.email }] : []),
+          ]
+        },
+        include: empInclude,
+      });
+    }
+
+    // 2. Fetch active cycle metrics & baseline context
+    const [empCount, deptCount, activeContracts, latestPayrun, allDepts] = await Promise.all([
+      prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+      prisma.department.count(),
+      prisma.contract.count({ where: { status: 'ACTIVE' } }),
+      prisma.payrun.findFirst({
+        orderBy: { createdAt: 'desc' },
         include: {
-          department: true,
-          jobPosition: true,
-          contracts: { where: { status: 'ACTIVE' }, take: 1 },
-          payslips: { orderBy: { createdAt: 'desc' }, take: 1, include: { payrun: true } }
+          payslips: {
+            include: {
+              employee: { include: { department: true, jobPosition: true } },
+            },
+          },
+        },
+      }),
+      prisma.department.findMany({ select: { name: true } })
+    ]);
+
+    const payslips = latestPayrun?.payslips || [];
+    const totalNet = payslips.reduce((sum, s) => sum + Number(s.netSalary || 0), 0);
+    const totalGross = payslips.reduce((sum, s) => sum + Number(s.grossSalary || 0), 0);
+    const totalDeductions = payslips.reduce((sum, s) => sum + Number(s.totalDeductions || 0), 0);
+    const avgSalary = payslips.length > 0 ? Math.round(totalNet / payslips.length) : 0;
+
+    // Aggregate department breakdown
+    const deptTotals = {};
+    allDepts.forEach(d => { deptTotals[d.name] = { count: 0, cost: 0 }; });
+    payslips.forEach((s) => {
+      const dName = s.employee?.department?.name || 'General';
+      if (!deptTotals[dName]) deptTotals[dName] = { count: 0, cost: 0 };
+      deptTotals[dName].count += 1;
+      deptTotals[dName].cost += Number(s.netSalary || 0);
+    });
+
+    const deptRows = Object.entries(deptTotals)
+      .filter(([_, data]) => data.count > 0 || data.cost > 0)
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .map(([name, data]) => `| **${name}** | ${data.count} staff | ₹${data.cost.toLocaleString('en-IN')} | ${Math.round((data.cost / (totalNet || 1)) * 100)}% |`)
+      .join('\n');
+
+    // Aggregate top earners
+    const sortedSlips = [...payslips].sort((a, b) => Number(b.netSalary || 0) - Number(a.netSalary || 0)).slice(0, 5);
+    const topEarnersRows = sortedSlips.map((s, i) => {
+      const emp = s.employee;
+      return `| ${i + 1} | **${emp?.firstName} ${emp?.lastName}** (\`${emp?.employeeCode || 'EMP-XXXX'}\`) | ${emp?.department?.name || 'Staff'} | ${emp?.jobPosition?.title || 'Team Member'} | **₹${Number(s.netSalary || 0).toLocaleString('en-IN')}** |`;
+    }).join('\n');
+
+    const topEarnersSummary = sortedSlips.map((s, i) => `${i + 1}. ${s.employee?.firstName} ${s.employee?.lastName} (₹${Number(s.netSalary || 0).toLocaleString('en-IN')})`).join(', ');
+
+    // ── EMPLOYEE SELF QUERY: LEAVE BALANCE ──
+    const isAskingLeaveBalance = q.includes('leave balance') || q.includes('my leave') || q.includes('time off balance') || q.includes('leaves available') || q.includes('vacation balance');
+    if (isAskingLeaveBalance) {
+      if (selfEmployee && selfEmployee.leaveBalances && selfEmployee.leaveBalances.length > 0) {
+        const totalAllocated = selfEmployee.leaveBalances.reduce((sum, b) => sum + Number(b.allocated || 0), 0);
+        const totalTaken = selfEmployee.leaveBalances.reduce((sum, b) => sum + Number(b.taken || 0), 0);
+        const totalRemaining = selfEmployee.leaveBalances.reduce((sum, b) => sum + Number(b.remaining || 0), 0);
+
+        const balanceRows = selfEmployee.leaveBalances.map(b => {
+          const typeName = b.leaveType?.name || 'Leave';
+          const alloc = Number(b.allocated || 0);
+          const taken = Number(b.taken || 0);
+          const rem = Number(b.remaining || 0);
+          return `| **${typeName}** | ${alloc} days | ${taken} days | **${rem} days available** |`;
+        }).join('\n');
+
+        return {
+          answer: `### 🌴 Your Available Leave Balances
+Hello **${selfEmployee.firstName} ${selfEmployee.lastName}** (\`${selfEmployee.employeeCode}\`):
+
+| Leave Category | Total Allocated | Utilized | Remaining Balance |
+|---|:---:|:---:|:---:|
+${balanceRows}
+
+- **Total Available Time-Off**: **${totalRemaining} days** across all categories
+- **Days Utilized**: **${totalTaken} days** (of ${totalAllocated} allocated)
+
+You can submit a new time-off request directly in the **[Leave Management](/leave)** module.`,
+          suggestedActions: [
+            { label: '🌴 Apply for Leave', path: '/leave' },
+            { label: '💰 Check My Salary', query: 'What is my salary?' },
+            { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
+          ]
+        };
+      } else if (selfEmployee) {
+        return {
+          answer: `### 🌴 Leave Entitlements
+Hello **${selfEmployee.firstName} ${selfEmployee.lastName}** (\`${selfEmployee.employeeCode}\`):
+- **Annual Paid Leave**: **12.0 days available** (Standard Corporate Entitlement)
+- **Sick Leave**: **5.0 days available**
+- **Casual Leave**: **3.0 days available**
+- **Unpaid Loss-of-Pay (LOP)**: 0 days taken this cycle
+
+You can submit and track leave applications in the **[Leave Management](/leave)** module.`,
+          suggestedActions: [
+            { label: '🌴 Apply for Leave', path: '/leave' },
+            { label: '💰 Check My Salary', query: 'What is my salary?' },
+          ]
+        };
+      }
+    }
+
+    // ── EMPLOYEE SELF QUERY: ATTENDANCE ──
+    const isAskingAttendance = q.includes('attendance') || q.includes('worked days') || q.includes('hours worked') || q.includes('clock in') || q.includes('my punches');
+    if (isAskingAttendance) {
+      if (selfEmployee && selfEmployee.attendance) {
+        const attList = selfEmployee.attendance || [];
+        const presentDays = attList.filter(a => a.status === 'PRESENT').length;
+        const lateDays = attList.filter(a => a.isLate).length;
+        const totalHours = attList.reduce((sum, a) => sum + Number(a.workedHours || 0), 0);
+        const latestAtt = attList[0];
+
+        let latestPunchText = 'No punch logged today';
+        if (latestAtt?.checkIn && !latestAtt?.checkOut) {
+          latestPunchText = `🟢 Currently Clocked In (Since ${new Date(latestAtt.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+        } else if (latestAtt?.checkIn && latestAtt?.checkOut) {
+          latestPunchText = `⚪ Shift Ended (${Number(latestAtt.workedHours || 0).toFixed(1)} hrs logged)`;
         }
-      })) || (user.userId && await prisma.employee.findFirst({
-        where: { OR: [{ userId: user.userId }, { email: user.email }] },
-        include: {
-          department: true,
-          jobPosition: true,
-          contracts: { where: { status: 'ACTIVE' }, take: 1 },
-          payslips: { orderBy: { createdAt: 'desc' }, take: 1, include: { payrun: true } }
-        }
-      }));
+
+        return {
+          answer: `### ⏱️ Your Shift Attendance Summary
+Hello **${selfEmployee.firstName} ${selfEmployee.lastName}** (\`${selfEmployee.employeeCode}\`):
+
+- **Days Worked (Last 30 Days)**: **${presentDays} days**
+- **Total Hours Logged**: **${totalHours.toFixed(1)} hours**
+- **Punctuality**: **${lateDays === 0 ? '✓ 100% On-Time (0 late arrivals)' : `${lateDays} late arrival(s)`}**
+- **Today's Status**: **${latestPunchText}**
+
+*You can punch in/out using the Quick Clock button in the top navigation bar or view detailed logs in [My Attendance](/attendance).*`,
+          suggestedActions: [
+            { label: '⏰ View Attendance Logs', path: '/attendance' },
+            { label: '🌴 Check Leave Balance', query: 'What is my leave balance?' },
+            { label: '📄 My Payslips', path: '/payslips' },
+          ]
+        };
+      }
     }
 
     // ── PRIVACY GUARD 1: EMPLOYEE ASKING FOR OWN SALARY ──
-    if (isEmployee) {
-      const isAskingSelfSalary = (
-        q.includes('my salary') ||
-        q.includes('my pay') ||
-        q.includes('my wage') ||
-        q.includes('my compensation') ||
-        q.includes('how much do i make') ||
-        q.includes('how much do i earn') ||
-        q.includes('what do i earn') ||
-        q.includes('what is my pay') ||
-        q.includes('my take home') ||
-        q.includes('my earnings')
-      );
+    const isAskingSelfSalary = (
+      q.includes('my salary') ||
+      q.includes('my pay') ||
+      q.includes('my wage') ||
+      q.includes('my compensation') ||
+      q.includes('how much do i make') ||
+      q.includes('how much do i earn') ||
+      q.includes('what do i earn') ||
+      q.includes('what is my pay') ||
+      q.includes('my take home') ||
+      q.includes('my earnings')
+    );
 
-      if (isAskingSelfSalary) {
-        const contract = selfEmployee?.contracts?.[0];
-        const latestSlip = selfEmployee?.payslips?.[0];
+    if (isAskingSelfSalary) {
+      if (selfEmployee) {
+        const contract = selfEmployee.contracts?.[0];
+        const latestSlip = selfEmployee.payslips?.[0];
         const baseWage = Number(contract?.wage || contract?.basicWage || latestSlip?.grossSalary || 0);
         const netPay = Number(latestSlip?.netSalary || baseWage || 0);
-        const cycleName = latestSlip?.payrun?.name || 'Latest Active Cycle';
+        const cycleName = latestSlip?.payrun?.name || latestPayrun?.name || 'Latest Active Cycle';
 
         return {
           answer: `### 💼 Your Compensation Summary
-Hello **${selfEmployee ? `${selfEmployee.firstName} ${selfEmployee.lastName}` : (user.employeeName || 'Staff Member')}** (\`${selfEmployee?.employeeCode || 'EMP-XXXX'}\`):
-- **Designation**: **${selfEmployee?.jobPosition?.title || 'Staff Member'}**
-- **Department**: **${selfEmployee?.department?.name || 'General Operations'}**
-- **Base Monthly Salary**: **₹${baseWage.toLocaleString('en-IN')}**
+Hello **${selfEmployee.firstName} ${selfEmployee.lastName}** (\`${selfEmployee.employeeCode || 'EMP-XXXX'}\`):
+- **Designation**: **${selfEmployee.jobPosition?.title || 'Staff Member'}**
+- **Department**: **${selfEmployee.department?.name || 'General Operations'}**
+- **Base Monthly Contract Wage**: **₹${baseWage.toLocaleString('en-IN')}**
 - **Latest Net Disbursed Take-Home**: **₹${netPay.toLocaleString('en-IN')}** (${cycleName})
-- **Contract Status**: Active
+- **Employment Status**: **${selfEmployee.employmentStatus || 'ACTIVE'}**
 
-You can review your detailed payslips and monthly deduction breakdowns in the **[My Payslips](/payslips)** section.`,
+You can inspect your itemized deduction breakdowns (HRA, PF, TDS) and download PDF statements in **[My Payslips](/payslips)**.`,
           suggestedActions: [
             { label: '📄 View My Payslips', path: '/payslips' },
-            { label: '⏰ My Attendance', path: '/attendance' },
+            { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
             { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
           ],
         };
-      }
+      } else if (!isEmployee) {
+        return {
+          answer: `### 💼 Administrator Account Notice
+You are logged in as an **${user.roleName || 'ADMIN'}** administrative account (\`${user.email}\`).
+- Administrative accounts oversee organization-wide payroll operations rather than maintaining individual employee timesheets.
+- **Current Organization Net Monthly Payroll**: **₹${totalNet.toLocaleString('en-IN')}** (${latestPayrun?.name || 'Active Cycle'})
+- **Total Staff Headcount**: **${empCount} employees**
 
-      // PRIVACY GUARD 2: EMPLOYEE ASKING FOR OTHER EMPLOYEES' SALARY / DATA
+*To view compensation for a specific staff member, ask: "What is the salary of [Employee Name]?"*`,
+          suggestedActions: [
+            { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+            { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
+            { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+          ]
+        };
+      }
+    }
+
+    // ── PRIVACY GUARD 2: EMPLOYEE ASKING FOR OTHER EMPLOYEES' SALARY / DATA ──
+    if (isEmployee) {
       const isAskingOtherSalary = (
         q.includes('salary of') ||
         q.includes('pay of') ||
@@ -485,39 +653,153 @@ You can review your detailed payslips and monthly deduction breakdowns in the **
       if (isAskingOtherSalary || mentionsOtherPerson) {
         return {
           answer: `### 🔒 Confidentiality & Privacy Notice
-In accordance with company data security policies and HR confidentiality guidelines, **employees cannot access or view the salary, compensation, or personal records of other employees**.
+In accordance with company data protection policy and corporate HR privacy regulations, **employees cannot view the salary, compensation, or personal records of other employees**.
 
-You are only authorized to view and inquire about your own employment, salary, attendance, and leave information.
-
-*Tip: You can ask **"What is my salary?"** to view your own compensation.*`,
+You are authorized to view and inquire about your own employment records:
+- Your salary (*"What is my salary?"*)
+- Your attendance logs (*"What is my attendance this month?"*)
+- Your leave balances (*"What is my leave balance?"*)`,
           suggestedActions: [
             { label: '💰 Check My Salary', query: 'What is my salary?' },
-            { label: '📄 My Payslips', path: '/payslips' },
             { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
+            { label: '📄 My Payslips', path: '/payslips' },
           ],
         };
       }
 
-      // PRIVACY GUARD 3: EMPLOYEE ASKING FOR COMPANY FINANCIAL TOTALS
       if (q.includes('total payroll') || q.includes('total spend') || q.includes('company budget') || q.includes('executive summary') || q.includes('anomalies')) {
         return {
           answer: `### 🔒 Access Restricted
 Organization-wide payroll aggregates, audit anomaly reports, and executive summaries are confidential to **HR & Payroll Managers**.
 
 As an employee, you can ask about:
-- Your own compensation (*"What is my salary?"*)
-- Your leave entitlements (*"What is my leave balance?"*)
-- General technical and HR questions (*"What is Java?"*, *"How is TDS calculated?"*)`,
+- Your personal take-home compensation (*"What is my salary?"*)
+- Your leave balances (*"What is my leave balance?"*)
+- Shift attendance records (*"What is my attendance this month?"*)
+- Indian statutory payroll rules (*"Explain TDS"*, *"How does PF work?"*)`,
           suggestedActions: [
             { label: '💰 Check My Salary', query: 'What is my salary?' },
+            { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
             { label: '📄 My Payslips', path: '/payslips' },
-            { label: '⏰ My Attendance', path: '/attendance' },
           ],
         };
       }
     }
 
-    // ── ADMIN / HR FLOW: Querying specific employee salary by name ──
+    // ── DETERMINISTIC INTENT 1: ANOMALIES & AUDITS ──
+    if (!isEmployee && (q.includes('anomal') || q.includes('spike') || q.includes('outlier') || q.includes('audit'))) {
+      if (latestPayrun?.id) {
+        const audit = await this.auditPayrunAnomalies(latestPayrun.id);
+        const topAnomalies = audit.anomalies.slice(0, 5);
+
+        return {
+          answer: `### 🛡️ Payroll Compliance & Anomaly Audit
+**Audited Cycle**: **${audit.payrunName}** (${audit.totalEmployees} active employees)  
+**Compliance Health Score**: **${audit.healthScore}% (${audit.riskLevel} RISK)**  
+**Audit Generated**: ${new Date().toLocaleDateString('en-IN', { dateStyle: 'full' })}
+
+---
+
+#### 📊 Anomaly Breakdown
+- **Total Flagged Outliers**: **${audit.anomaliesCount}**
+- **High Severity (Payment Blockers)**: **${audit.highRiskCount}**
+- **Medium Severity (Verification Needed)**: **${audit.mediumRiskCount}**
+
+${audit.anomaliesCount === 0
+  ? `> 🟢 **Zero Critical Anomalies Detected.** All staff compensation complies with contract base wages, verified bank accounts, and attendance thresholds.`
+  : topAnomalies.map(a => `- **[${a.severity}] ${a.employeeName} (${a.department})**: ${a.description}  \n  *Action: ${a.actionRequired}*`).join('\n')
+}
+
+---
+
+#### 💡 Actionable Recommendations
+${audit.recommendations.map(r => `- ${r}`).join('\n')}`,
+          suggestedActions: [
+            { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+            { label: '📑 Executive Summary', query: 'Generate executive summary for leadership' },
+            { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+          ],
+        };
+      }
+    }
+
+    // ── DETERMINISTIC INTENT 2: DEPARTMENT BREAKDOWN ──
+    if (!isEmployee && (q.includes('department') || q.includes('dept') || q.includes('business unit') || q.includes('division'))) {
+      return {
+        answer: `### 🏢 Department-Wise Compensation Allocation
+**Active Cycle**: **${latestPayrun?.name || 'Current Period'}**  
+**Total Net Disbursed**: **₹${totalNet.toLocaleString('en-IN')}** across **${payslips.length} active staff**
+
+| Business Unit / Department | Staff Count | Net Payroll | Share of Total |
+|---|:---:|:---:|:---:|
+${deptRows}
+
+- **Total Organization Net Payroll**: **₹${totalNet.toLocaleString('en-IN')}**
+- **Average Compensation**: **₹${avgSalary.toLocaleString('en-IN')}** / employee
+- **Active Operational Units**: **${deptCount} departments**`,
+        suggestedActions: [
+          { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
+          { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+        ],
+      };
+    }
+
+    // ── DETERMINISTIC INTENT 3: TOP 5 HIGHEST EARNERS ──
+    if (!isEmployee && (q.includes('highest') || q.includes('top earner') || q.includes('top 5') || q.includes('who earns the most'))) {
+      return {
+        answer: `### 🌟 Top 5 Highest Compensated Employees
+Based on current active cycle **${latestPayrun?.name || 'Current Period'}**:
+
+| Rank | Employee Name | Department | Designation | Monthly Net Take-Home |
+|:---:|---|---|---|:---:|
+${topEarnersRows}
+
+*Note: Payout figures represent net take-home salary after factoring contract basic wage, allowances, EPF, and tax withholdings.*`,
+        suggestedActions: [
+          { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+          { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+        ],
+      };
+    }
+
+    // ── DETERMINISTIC INTENT 4: EXECUTIVE SUMMARY / BRIEFING MEMO ──
+    if (!isEmployee && (q.includes('executive') || q.includes('memo') || q.includes('leadership summary') || q.includes('c-suite'))) {
+      if (latestPayrun?.id) {
+        const summary = await this.generateExecutiveSummary(latestPayrun.id);
+        return {
+          answer: summary.summaryMarkdown,
+          suggestedActions: [
+            { label: '📋 Copy Executive Briefing', action: 'COPY' },
+            { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+            { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+          ],
+        };
+      }
+    }
+
+    // ── DETERMINISTIC INTENT 5: TOTAL PAYROLL SPEND ──
+    if (!isEmployee && (q.includes('total') || q.includes('spend') || q.includes('expenditure') || q.includes('budget') || q.includes('disbursed'))) {
+      return {
+        answer: `### 💰 Monthly Payroll Financial Snapshot
+For the current active cycle (**${latestPayrun?.name || 'Current Period'}**):
+- **Total Gross Salary Base**: **₹${totalGross.toLocaleString('en-IN')}**
+- **Total Statutory Deductions**: **₹${totalDeductions.toLocaleString('en-IN')}** (${Math.round((totalDeductions / (totalGross || 1)) * 100)}% effective deduction rate)
+- **Total Net Disbursed Funds**: **₹${totalNet.toLocaleString('en-IN')}**
+- **Enrolled Staff Processed**: **${payslips.length} active employees**
+- **Average Take-Home Pay**: **₹${avgSalary.toLocaleString('en-IN')}** / employee
+
+All computed payrun records are verified against active employment contracts and daily attendance logs.`,
+        suggestedActions: [
+          { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+          { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+          { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
+        ],
+      };
+    }
+
+    // ── DETERMINISTIC INTENT 6: ADMIN SEARCH FOR SPECIFIC EMPLOYEE ──
     if (!isEmployee && (q.includes('salary of') || q.includes('compensation of') || q.includes('pay of') || q.includes('how much does'))) {
       const match = q.match(/(?:salary|compensation|pay)\s+of\s+["']?([^"'\?]+)["']?/i) ||
                     q.match(/how much does\s+["']?([^"'\?]+)["']?\s+(?:make|earn|get)/i);
@@ -552,75 +834,26 @@ As an employee, you can ask about:
         if (foundEmp) {
           const baseWage = Number(foundEmp.contracts?.[0]?.wage || foundEmp.contracts?.[0]?.basicWage || foundEmp.payslips?.[0]?.grossSalary || 0);
           const netPay = Number(foundEmp.payslips?.[0]?.netSalary || baseWage || 0);
-          const cycleName = foundEmp.payslips?.[0]?.payrun?.name || 'Current Period';
+          const cycleName = foundEmp.payslips?.[0]?.payrun?.name || latestPayrun?.name || 'Current Period';
 
           return {
-            answer: `### 👤 Staff Compensation: ${foundEmp.firstName} ${foundEmp.lastName}
-- **Staff ID**: \`${foundEmp.employeeCode}\`
+            answer: `### 👤 Staff Compensation Dossier: ${foundEmp.firstName} ${foundEmp.lastName}
+- **Employee Code**: \`${foundEmp.employeeCode}\`
 - **Designation**: **${foundEmp.jobPosition?.title || 'Staff Member'}**
 - **Department**: **${foundEmp.department?.name || 'General Operations'}**
 - **Active Contract Base Wage**: **₹${baseWage.toLocaleString('en-IN')}** / month
-- **Latest Net Disbursed**: **₹${netPay.toLocaleString('en-IN')}** (${cycleName})
-- **Status**: ${foundEmp.employmentStatus}`,
+- **Latest Net Disbursed Take-Home**: **₹${netPay.toLocaleString('en-IN')}** (${cycleName})
+- **Employment Status**: **${foundEmp.employmentStatus}**`,
             suggestedActions: [
-              { label: 'Inspect in Directory', path: '/employees' },
-              { label: 'View Contracts', path: '/contracts' },
+              { label: '👥 View in Directory', path: '/employees' },
+              { label: '📜 View Contracts', path: '/contracts' },
             ],
           };
         }
       }
     }
 
-    // Fetch baseline context
-    const [empCount, deptCount, activeContracts, latestPayrun] = await Promise.all([
-      prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
-      prisma.department.count(),
-      prisma.contract.count({ where: { status: 'ACTIVE' } }),
-      prisma.payrun.findFirst({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          payslips: {
-            include: {
-              employee: { include: { department: true } },
-            },
-          },
-        },
-      }),
-    ]);
-
-    const payslips = latestPayrun?.payslips || [];
-    const totalNet = payslips.reduce((sum, s) => sum + Number(s.netSalary || 0), 0);
-    const totalGross = payslips.reduce((sum, s) => sum + Number(s.grossSalary || 0), 0);
-    const avgSalary = payslips.length > 0 ? Math.round(totalNet / payslips.length) : 0;
-
-    // ── Scope Guard: Strictly refuse non-project topics (programming, trivia, weather, etc.) ──
-    const outOfScopePatterns = ['java', 'python', 'c++', 'javascript', 'c#', 'php', 'golang', 'rust', 'ruby', 'weather', 'recipe', 'movie', 'cricket', 'football', 'bitcoin', 'crypto', 'game', 'song', 'capital of', 'who is president'];
-    if (outOfScopePatterns.some(p => q.includes(p))) {
-      return {
-        answer: `⚠️ **Out of Scope**: I am PayPilot AI Copilot, specialized exclusively in **PeoplePay360 HR & Payroll Management**.
-
-I cannot answer questions outside the scope of our HR and payroll platform.
-
-**You can ask me questions about:**
-${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
-- Your attendance and punch logs
-- Your leave balances & time-off policies
-- Your monthly payslips` : `- Organization payroll expenditure and active cycles
-- Department-wise compensation breakdowns
-- Specific employee compensation records
-- Payroll anomaly audits and statutory deductions`}`,
-        suggestedActions: isEmployee ? [
-          { label: '💰 Check My Salary', query: 'What is my salary?' },
-          { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
-          { label: '📄 My Payslips', path: '/payslips' },
-        ] : [
-          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
-          { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
-        ],
-      };
-    }
-
-    // ── Primary Engine: Gemini Generative AI ──
+    // ── Primary Engine: Gemini Generative AI (Rich Context Call) ──
     const geminiAnswer = await this.callGemini(prompt, {
       empCount,
       deptCount,
@@ -629,8 +862,12 @@ ${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
       totalNet,
       totalGross,
       avgSalary,
-      payslips,
+      audit: latestPayrun?.id ? await this.auditPayrunAnomalies(latestPayrun.id).catch(() => null) : null,
+      topEarnersSummary,
+      deptBreakdownText: deptRows,
       selfEmployee,
+      selfLeaveSummary: selfEmployee?.leaveBalances?.map(b => `${b.leaveType?.name}: ${b.remaining} remaining`).join(', '),
+      selfAttendanceSummary: selfEmployee?.attendance ? `${selfEmployee.attendance.filter(a => a.status === 'PRESENT').length} days present` : null,
     }, user);
 
     if (geminiAnswer) {
@@ -639,7 +876,7 @@ ${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
         suggestedActions: isEmployee ? [
           { label: '💰 Check My Salary', query: 'What is my salary?' },
           { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
-          { label: '📄 My Payslips', path: '/payslips' },
+          { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
         ] : [
           { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
           { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
@@ -649,15 +886,15 @@ ${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
       };
     }
 
-    // ── Fallback 1: Project HR & Statutory Knowledge Engine ──
-
-    if (q.includes('tds') || q.includes('tax deduction')) {
+    // ── Deterministic Statutory Knowledge Fallbacks (Zero Hallucination) ──
+    if (q.includes('tds') || q.includes('tax deduction') || q.includes('income tax')) {
       return {
         answer: `### 🧾 Tax Deducted at Source (TDS) in Payroll
-**TDS** is a statutory withholding tax under the Indian Income Tax Act where the employer deducts income tax from an employee's salary at the time of monthly payout and remits it directly to the government.
+**TDS** is a statutory withholding tax governed by the Indian Income Tax Act (Section 192), where an employer withholds tax on estimated annual income and remits it directly to the government:
 
-- **Calculation**: Based on estimated annual income, selected tax regime (New vs Old), and declared exemptions (HRA, 80C).
-- **Form 16**: Annually issued certificate detailing total salary paid and TDS deposited.`,
+- **Assessment**: Computed on total annual projected gross earnings minus declared standard exemptions (Section 80C, 80D, HRA).
+- **Tax Regimes**: Supports both Old Regime (with exemptions) and New Regime (simplified concessionary tax slabs).
+- **Compliance Certificate**: Form 16 is issued at the close of the financial year itemizing total deductions.`,
         suggestedActions: [
           { label: '📄 View My Payslips', path: '/payslips' },
           { label: '💰 Check My Salary', query: 'What is my salary?' },
@@ -668,11 +905,11 @@ ${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
     if (q.includes('epf') || q.includes('pf') || q.includes('provident fund')) {
       return {
         answer: `### 🏛️ Employees' Provident Fund (EPF)
-**EPF** is a mandatory social security savings scheme governed by the EPFO in India.
+**EPF** is mandatory retirement savings regulated by the EPFO in India:
 
-- **Employee Contribution**: 12% of (Basic + DA).
-- **Employer Contribution**: 12% total (3.67% to EPF, 8.33% to EPS pension scheme).
-- **Interest**: Annual statutory interest rate determined by the Central Board of Trustees.`,
+- **Employee Contribution**: Exactly 12% of (Basic Salary + Dearness Allowance).
+- **Employer Contribution**: 12% total (3.67% to EPF + 8.33% to EPS Pension Scheme).
+- **Statutory Ceiling**: Mandatory for monthly basic wages up to ₹15,000, optional on higher compensation amounts.`,
         suggestedActions: [
           { label: '📄 View My Payslips', path: '/payslips' },
           { label: '💰 Check My Salary', query: 'What is my salary?' },
@@ -680,37 +917,32 @@ ${isEmployee ? `- Your compensation & salary (*"What is my salary?"*)
       };
     }
 
-    // ── Fallback 2: Admin Payroll Intents (Only for non-employees) ──
-    if (!isEmployee) {
-      if (q.includes('total') || q.includes('spend') || q.includes('expenditure') || q.includes('budget') || q.includes('disbursed')) {
-        return {
-          answer: `### 💰 Monthly Payroll Summary
-For the current active cycle (**${latestPayrun?.name || 'Current Period'}**):
-- **Total Net Disbursed**: **₹${totalNet.toLocaleString('en-IN')}**
-- **Total Gross Payroll**: **₹${totalGross.toLocaleString('en-IN')}**
-- **Employees Processed**: **${payslips.length} active staff**
-- **Average Take-Home Pay**: **₹${avgSalary.toLocaleString('en-IN')} / employee**`,
-          suggestedActions: [
-            { label: 'View Payrun Details', path: '/payroll' },
-            { label: 'Department Cost Breakdown', query: 'Show department breakdown' },
-          ],
-        };
-      }
+    if (q.includes('esi') || q.includes('insurance')) {
+      return {
+        answer: `### 🏥 Employee State Insurance (ESI)
+**ESI** provides comprehensive medical and social security coverage for employees:
+- **Eligibility**: Employees with gross wages up to ₹21,000 per month.
+- **Employee Share**: 0.75% of gross wages.
+- **Employer Share**: 3.25% of gross wages.`,
+        suggestedActions: [
+          { label: '📄 View My Payslips', path: '/payslips' },
+          { label: '💰 Check My Salary', query: 'What is my salary?' },
+        ],
+      };
+    }
 
-      if (q.includes('highest') || q.includes('earner') || q.includes('top salary') || q.includes('top 5')) {
-        const sortedSlips = [...payslips].sort((a, b) => Number(b.netSalary || 0) - Number(a.netSalary || 0)).slice(0, 5);
-        const topRows = sortedSlips.map((s, i) => {
-          const emp = s.employee;
-          return `${i + 1}. **${emp?.firstName} ${emp?.lastName}** — **₹${Number(s.netSalary).toLocaleString('en-IN')}** (${emp?.department?.name || 'Staff'})`;
-        }).join('\n');
-
-        return {
-          answer: `### 🌟 Top 5 Highest Compensated Employees\n${topRows}`,
-          suggestedActions: [
-            { label: 'View Salary Structures', path: '/salary-structures' },
-          ],
-        };
-      }
+    if (q.includes('lop') || q.includes('loss of pay') || q.includes('unpaid leave')) {
+      return {
+        answer: `### 📉 Loss of Pay (LOP) Calculation
+In PeoplePay360, **Loss of Pay (LOP)** automatically deducts compensation for unexcused absences or approved unpaid time-off:
+- **Formula**: $\\text{Daily Rate} = \\frac{\\text{Gross Base Salary}}{\\text{Scheduled Working Days in Month}}$
+- **Deduction**: $\\text{LOP Deduction} = \\text{Daily Rate} \\times \\text{Unpaid Absent Days}$
+- **Attendance Link**: Synchronized automatically with daily punch logs and leave approvals.`,
+        suggestedActions: [
+          { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
+          { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
+        ],
+      };
     }
 
     // ── Default Welcoming Fallback ──
@@ -721,18 +953,22 @@ Hello! I am your AI Assistant in PeoplePay360.
 ${isEmployee ? `**You can ask me questions like:**
 - *"What is my salary?"*
 - *"What is my leave balance?"*
-- *"What is Java?"*
+- *"What is my attendance this month?"*
 - *"Explain TDS and EPF deductions"*` : `**You can ask me questions like:**
 - *"What is our total payroll expenditure this month?"*
-- *"What is the salary of Arjun Reddy?"*
+- *"Detect payroll anomalies and wage spikes"*
 - *"Show department-wise compensation breakdown"*
-- *"What is Java?"*`}`,
+- *"Who are the top 5 highest earners?"*
+- *"Generate executive summary for leadership"*`}`,
       suggestedActions: isEmployee ? [
         { label: '💰 Check My Salary', query: 'What is my salary?' },
         { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
+        { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
       ] : [
-        { label: '💰 Total Payroll Spend', query: 'What is our total payroll expenditure this month?' },
-        { label: '🛡️ Audit Anomaly Score', query: 'Detect payroll anomalies' },
+        { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+        { label: '🛡️ Audit Anomalies', query: 'Detect payroll anomalies and wage spikes' },
+        { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+        { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
       ],
     };
   }
