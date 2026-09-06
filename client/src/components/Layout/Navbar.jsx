@@ -1,6 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { LogOut, Clock, Calendar, Search, Bell } from 'lucide-react';
+import {
+  LogOut,
+  Clock,
+  Calendar,
+  Search,
+  Bell,
+  CheckCheck,
+  Check,
+  CalendarCheck,
+  Calculator,
+  AlertCircle,
+  Inbox,
+  Sparkles
+} from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -10,6 +23,12 @@ export default function Navbar() {
   const [clockLoading, setClockLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     async function checkAttendance() {
@@ -27,6 +46,80 @@ export default function Navbar() {
       checkAttendance();
     }
   }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await api.get('/notifications');
+      if (data?.data) {
+        setNotifications(data.data.items || []);
+        setUnreadCount(data.data.unreadCount || 0);
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 45000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Click outside to close notifications dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showNotifications]);
+
+  const handleMarkAsRead = async (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) {
+      toast.error('Failed to update notification');
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await api.put('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+      toast.success('All notifications marked as read');
+    } catch (e) {
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const getNotifIcon = (type) => {
+    if (type?.includes('LEAVE')) return <CalendarCheck size={16} color="#d97706" />;
+    if (type?.includes('PAYROLL')) return <Calculator size={16} color="#4f46e5" />;
+    if (type?.includes('ATTENDANCE')) return <Clock size={16} color="#059669" />;
+    return <Sparkles size={16} color="#7c3aed" />;
+  };
+
+  const formatNotifTime = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   const handleTogglePunch = async () => {
     setClockLoading(true);
@@ -188,36 +281,310 @@ export default function Navbar() {
           </span>
         </button>
 
-        {/* Notification Bell (Innowise Style) */}
-        <button
-          style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
-            backgroundColor: '#f6f5fb',
-            border: '1px solid #e5e3ec',
-            color: '#5554aa',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            position: 'relative',
-            transition: 'all 0.15s ease'
-          }}
-          title="Notifications"
-        >
-          <Bell size={16} />
-          <span style={{
-            position: 'absolute',
-            top: '7px',
-            right: '7px',
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: '#f43f5e',
-            border: '1.5px solid #ffffff'
-          }} />
-        </button>
+        {/* Notification Bell (Innowise Style with Popover Dropdown) */}
+        <div style={{ position: 'relative' }} ref={notifRef}>
+          <button
+            onClick={() => {
+              const nextState = !showNotifications;
+              setShowNotifications(nextState);
+              if (nextState) fetchNotifications();
+            }}
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '10px',
+              backgroundColor: showNotifications ? '#edeaf7' : '#f6f5fb',
+              border: `1px solid ${showNotifications ? '#5554aa' : '#e5e3ec'}`,
+              color: '#5554aa',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'all 0.15s ease'
+            }}
+            title="Notifications"
+            aria-label="View notifications"
+          >
+            <Bell size={16} />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  minWidth: '18px',
+                  height: '18px',
+                  padding: '0 4px',
+                  borderRadius: '999px',
+                  backgroundColor: '#f43f5e',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #ffffff',
+                  boxShadow: '0 2px 6px rgba(244, 63, 94, 0.45)',
+                  lineHeight: 1
+                }}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown Panel */}
+          {showNotifications && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '48px',
+                right: '0',
+                width: '380px',
+                maxWidth: 'calc(100vw - 32px)',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #e5e3ec',
+                boxShadow: '0 12px 36px -4px rgba(24, 24, 55, 0.14), 0 0 1px rgba(24, 24, 55, 0.1)',
+                zIndex: 1000,
+                overflow: 'hidden',
+                animation: 'fadeIn 0.15s ease-out'
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: '14px 18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid #f1f0f7',
+                  backgroundColor: '#faf9fc'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: 700, color: '#181837', fontSize: '14px' }}>
+                    Notifications
+                  </span>
+                  {unreadCount > 0 && (
+                    <span
+                      style={{
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        backgroundColor: '#fef2f2',
+                        color: '#f43f5e',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        border: '1px solid #fecdd3'
+                      }}
+                    >
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#5554aa',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 6px',
+                      borderRadius: '6px',
+                      transition: 'background 0.15s'
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#edeaf7')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <CheckCheck size={14} />
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* Notification List */}
+              <div
+                style={{
+                  maxHeight: '380px',
+                  overflowY: 'auto'
+                }}
+              >
+                {notifications.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '40px 20px',
+                      textAlign: 'center',
+                      color: '#94a3b8'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        backgroundColor: '#f6f5fb',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 12px'
+                      }}
+                    >
+                      <Inbox size={22} color="#757498" />
+                    </div>
+                    <div style={{ fontWeight: 600, color: '#475569', fontSize: '13.5px' }}>
+                      No notifications yet
+                    </div>
+                    <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                      You're all caught up! Updates will appear here.
+                    </div>
+                  </div>
+                ) : (
+                  notifications.map((notif) => {
+                    const isUnread = !notif.isRead;
+                    return (
+                      <div
+                        key={notif.id || notif._id}
+                        onClick={(e) => {
+                          if (isUnread) handleMarkAsRead(notif.id || notif._id, e);
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'flex-start',
+                          backgroundColor: isUnread ? '#fbfaff' : '#ffffff',
+                          borderBottom: '1px solid #f6f5fb',
+                          cursor: isUnread ? 'pointer' : 'default',
+                          transition: 'background 0.15s ease',
+                          position: 'relative'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isUnread) e.currentTarget.style.backgroundColor = '#f4f2fa';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isUnread) e.currentTarget.style.backgroundColor = '#fbfaff';
+                        }}
+                      >
+                        {/* Icon Avatar */}
+                        <div
+                          style={{
+                            width: '34px',
+                            height: '34px',
+                            borderRadius: '10px',
+                            backgroundColor: isUnread ? '#edeaf7' : '#f6f5fb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            marginTop: '2px'
+                          }}
+                        >
+                          {getNotifIcon(notif.type)}
+                        </div>
+
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '6px'
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: isUnread ? 700 : 600,
+                                color: isUnread ? '#181837' : '#475569',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}
+                            >
+                              {notif.title || 'System Notification'}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                color: '#94a3b8',
+                                flexShrink: 0
+                              }}
+                            >
+                              {formatNotifTime(notif.createdAt)}
+                            </span>
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: '#64748b',
+                              marginTop: '2px',
+                              lineHeight: 1.4,
+                              wordBreak: 'break-word'
+                            }}
+                          >
+                            {notif.message}
+                          </div>
+                        </div>
+
+                        {/* Unread indicator / mark read button */}
+                        {isUnread && (
+                          <button
+                            onClick={(e) => handleMarkAsRead(notif.id || notif._id, e)}
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: '#5554aa',
+                              border: 'none',
+                              color: '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              padding: 0,
+                              marginTop: '6px'
+                            }}
+                            title="Mark as read"
+                          >
+                            <Check size={11} strokeWidth={3} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#faf9fc',
+                  borderTop: '1px solid #f1f0f7',
+                  fontSize: '11.5px',
+                  color: '#757498',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}
+              >
+                <span>{notifications.length} recent notification{notifications.length !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>PeoplePay 360</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* User Monogram Pill (Innowise Style) */}
         <div style={{
