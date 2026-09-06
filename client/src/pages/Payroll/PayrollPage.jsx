@@ -178,14 +178,22 @@ export default function PayrollPage() {
 
   // Open Wizard
   const handleOpenWizard = () => {
-    setWizardForm(getInitialWizardForm());
+    const initForm = getInitialWizardForm();
+    if (structures.length > 0) {
+      initForm.salaryStructureId = structures[0].id;
+    }
+    setWizardForm(initForm);
+    if (selectedEmpIds.length === 0 && allEmployees.length > 0) {
+      setSelectedEmpIds(allEmployees.map(e => e.id));
+    }
     setWizardStep(1);
     setIsWizardOpen(true);
   };
 
   // Step 1 -> Step 2
-  const handleNextStep = () => {
-    if (!wizardForm.name.trim()) {
+  const handleNextStep = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!wizardForm.name || !wizardForm.name.trim()) {
       toast.error('Please enter a descriptive payrun name (e.g., September 2026 Payroll)');
       return;
     }
@@ -199,6 +207,8 @@ export default function PayrollPage() {
     }
     setWizardStep(2);
   };
+
+  const handleProceedToStep2 = handleNextStep;
 
   // Toggle Employee Checkbox in Step 2
   const handleToggleEmp = (id) => {
