@@ -85,10 +85,20 @@ app.use(errorHandler);
 
 const PORT = config.port;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 PeoplePay360 API Server running on http://localhost:${PORT}`);
   console.log(`   Environment: ${config.nodeEnv}`);
   console.log(`   Client URL: ${config.clientUrl}\n`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n⚠️  [EADDRINUSE] Port ${PORT} is already in use by another running instance of PeoplePay360 Server!`);
+    console.error(`   Please terminate the existing process listening on port ${PORT} or check running background terminals.\n`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+  }
 });
 
 module.exports = app;
