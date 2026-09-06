@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Sparkles, Receipt, AlertCircle } from 'lucide-react';
+import { Lock, Mail, ArrowRight, ShieldCheck, Users, Calculator, UserCheck, Receipt, AlertCircle, Eye, EyeOff, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@peoplepay360.com');
   const [password, setPassword] = useState('Password@123');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   
@@ -35,25 +36,40 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage(null);
-    if (!email || !password) {
-      setErrorMessage('Please enter both your email address and password.');
+    const cleanEmail = email.trim();
+    const cleanPass = password.trim();
+
+    if (!cleanEmail || !cleanPass) {
+      setErrorMessage('Please enter both your email address (or username) and password.');
       toast.error('Please fill in all fields');
       return;
     }
 
     setLoading(true);
     try {
-      const userData = await login(email, password);
+      const userData = await login(cleanEmail, cleanPass);
       toast.success('Signed in successfully');
       const target = getDestination(userData?.role);
       navigate(target, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Invalid email or password. Please try again.';
+      console.error('Login error:', err);
+      let msg = 'Invalid email or password. Please try again.';
+      if (!err.response) {
+        msg = 'Unable to connect to backend server. Please check your connection.';
+      } else if (err.response?.data?.error?.message) {
+        msg = err.response.data.error.message;
+      }
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClearSession = () => {
+    localStorage.clear();
+    toast.success('Session storage cleared. Try logging in again.');
+    setErrorMessage(null);
   };
 
   const handleQuickFill = (demoEmail, demoPass) => {
@@ -160,7 +176,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="login-email" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '7px' }}>
-              Corporate Email
+              Corporate Email or Username
             </label>
             <div style={{ position: 'relative' }}>
               <Mail size={17} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
@@ -168,11 +184,11 @@ export default function LoginPage() {
                 id="login-email"
                 name="email"
                 autoComplete="username"
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); if (errorMessage) setErrorMessage(null); }}
-                placeholder="name@peoplepay360.com"
+                placeholder="name@peoplepay360.com or admin"
                 className="form-input"
                 style={{ paddingLeft: '42px', height: '46px', fontSize: '0.92rem' }}
               />
@@ -180,22 +196,43 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="login-password" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '7px' }}>
-              Password
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+              <label htmlFor="login-password" style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', margin: 0 }}>
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  fontSize: '0.78rem',
+                  color: '#6366f1',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 500
+                }}
+              >
+                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                <span>{showPassword ? 'Hide' : 'Show'}</span>
+              </button>
+            </div>
             <div style={{ position: 'relative' }}>
               <Lock size={17} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 id="login-password"
                 name="password"
                 autoComplete="current-password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); if (errorMessage) setErrorMessage(null); }}
                 placeholder="••••••••"
                 className="form-input"
-                style={{ paddingLeft: '42px', height: '46px', fontSize: '0.92rem' }}
+                style={{ paddingLeft: '42px', paddingRight: '40px', height: '46px', fontSize: '0.92rem' }}
               />
             </div>
           </div>
@@ -219,6 +256,32 @@ export default function LoginPage() {
               </>
             )}
           </button>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2px' }}>
+            <button
+              type="button"
+              onClick={handleClearSession}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#94a3b8',
+                fontSize: '0.76rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                transition: 'color 0.15s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#64748b'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
+              title="Clear cached browser tokens and login state"
+            >
+              <RotateCcw size={12} />
+              <span>Reset session cache</span>
+            </button>
+          </div>
         </form>
 
         {/* Demo Roles Quick Fill */}

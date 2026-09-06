@@ -5,8 +5,13 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
   });
   const [loading, setLoading] = useState(true);
 
@@ -36,11 +41,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem('accessToken', accessToken);
     localStorage.setItem('refreshToken', refreshToken);
 
-    // Fetch full user profile
-    const { data: meData } = await api.get('/auth/me');
-    setUser(meData.data);
-    localStorage.setItem('user', JSON.stringify(meData.data));
-    return meData.data;
+    // Set user state immediately so login completes without delay
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+
+    // Fetch full user profile asynchronously without blocking login
+    try {
+      const { data: meData } = await api.get('/auth/me');
+      if (meData?.data) {
+        setUser(meData.data);
+        localStorage.setItem('user', JSON.stringify(meData.data));
+        return meData.data;
+      }
+    } catch (err) {
+      console.warn('Optional /auth/me fetch warning:', err);
+    }
+    return userData;
   }, []);
 
   const logout = useCallback(async () => {

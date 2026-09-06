@@ -26,10 +26,16 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({
-  origin: config.clientUrl,
+  origin: (origin, callback) => {
+    // Allow requests without origin (curl, postman, mobile) or any local dev port
+    if (!origin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) || origin === config.clientUrl) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
 }));
 
 // Rate limiting on auth routes

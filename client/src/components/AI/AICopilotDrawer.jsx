@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Sparkles, X, Send, Bot, User, Copy, Check, ChevronRight, AlertTriangle, ShieldCheck, FileText, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -13,47 +13,82 @@ export default function AICopilotDrawer() {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const navigate = useNavigate();
 
-  const isEmployee = user?.role?.name === 'EMPLOYEE' || user?.roleName === 'EMPLOYEE';
+  const role = user?.role || user?.roleName || user?.role?.name || 'EMPLOYEE';
+  const isEmployee = (role === 'EMPLOYEE');
+  const isHR = ['HR_MANAGER', 'HR_STAFF'].includes(role);
+  const isPayroll = ['PAYROLL_MANAGER', 'PAYROLL_USER'].includes(role);
+  const isSuperAdmin = ['SUPER_ADMIN', 'ADMIN'].includes(role);
+  const userName = user?.employee?.firstName || user?.name || user?.email?.split('@')[0] || 'there';
 
-  const defaultSuggestedActions = isEmployee ? [
-    { label: '💰 Check My Salary', query: 'What is my salary?' },
-    { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
-    { label: '⏰ My Attendance', query: 'What is my attendance this month?' },
-    { label: '🧾 Explain TDS', query: 'Explain TDS tax deduction' },
-    { label: '🏛️ Explain PF', query: 'Explain PF deduction' },
-  ] : [
-    { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
-    { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
-    { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
-    { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
-    { label: '📑 Executive Briefing Memo', query: 'Generate executive summary for leadership' },
-  ];
-
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: `### 👋 Hello! I'm PayPilot AI Copilot
-I'm your intelligent workforce and payroll copilot. I continuously monitor cycle expenditures, flag financial and compliance outliers, and answer questions about company compensation.
+  const defaultGreeting = useMemo(() => {
+    if (isEmployee) {
+      return {
+        role: 'assistant',
+        content: `### 👋 Hello, ${userName}!
+I'm your personal HR & Payroll Copilot in **PeoplePay360**. I can help you summarize your profile, verify salary calculations, check your attendance, and track your leave balances.
 
 **How can I assist you today?**`,
-      suggestedActions: defaultSuggestedActions,
-    },
-  ]);
-
-  // Update initial message suggestions when user loads
-  useEffect(() => {
-    if (user) {
-      setMessages((prev) => {
-        if (prev.length === 1 && prev[0].role === 'assistant') {
-          return [{
-            ...prev[0],
-            suggestedActions: defaultSuggestedActions
-          }];
-        }
-        return prev;
-      });
+        suggestedActions: [
+          { label: '👤 Summarize My Profile', query: 'Summarize my information' },
+          { label: '💼 My Salary Breakdown', query: 'What is my salary breakdown?' },
+          { label: '⏰ My Attendance Summary', query: 'What is my attendance summary this month?' },
+          { label: '🌴 My Leave Balance', query: 'What is my leave balance?' },
+          { label: '📄 My Payslips', path: '/payslips' },
+        ],
+      };
     }
-  }, [user?.role?.name, user?.roleName]);
+
+    if (isHR) {
+      return {
+        role: 'assistant',
+        content: `### 👋 Hello, ${userName}!
+I'm your People Operations Copilot in **PeoplePay360**. I can help analyze organization headcount, monitor today's attendance, and review pending leave requests across all departments.
+
+**How can I assist you today?**`,
+        suggestedActions: [
+          { label: '📊 Organization Headcount', query: 'Show organization headcount and department distribution' },
+          { label: '⏰ Company Attendance Today', query: 'What is company attendance today?' },
+          { label: '🌴 All Pending Leaves', query: 'Show all pending leave requests' },
+          { label: '👥 Employee Directory', path: '/employees' },
+        ],
+      };
+    }
+
+    if (isPayroll || isSuperAdmin) {
+      return {
+        role: 'assistant',
+        content: `### 👋 Hello, ${userName}!
+I'm your Executive Payroll & Workforce Copilot. I continuously monitor cycle expenditures, flag financial and compliance outliers, and answer questions about company compensation.
+
+**How can I assist you today?**`,
+        suggestedActions: [
+          { label: '💰 Total Monthly Spend', query: 'What is our total payroll expenditure this month?' },
+          { label: '🛡️ Audit Anomalies & Outliers', query: 'Detect payroll anomalies and wage spikes' },
+          { label: '🏢 Dept Cost Breakdown', query: 'Show department-wise compensation breakdown' },
+          { label: '🌟 Top 5 Highest Earners', query: 'Who are the top 5 highest earners?' },
+          { label: '📑 Executive Briefing Memo', query: 'Generate executive summary for leadership' },
+        ],
+      };
+    }
+
+    return {
+      role: 'assistant',
+      content: `### 👋 Hello, ${userName}!
+I'm your PayPilot AI Copilot in **PeoplePay360**. How can I assist you today?`,
+      suggestedActions: [
+        { label: '👤 Summarize My Profile', query: 'Summarize my information' },
+        { label: '💰 My Salary Breakdown', query: 'What is my salary breakdown?' },
+        { label: '⏰ My Attendance', query: 'What is my attendance summary this month?' },
+      ],
+    };
+  }, [role, userName, isEmployee, isHR, isPayroll, isSuperAdmin]);
+
+  const [messages, setMessages] = useState([defaultGreeting]);
+
+  // Update initial message when user changes
+  useEffect(() => {
+    setMessages([defaultGreeting]);
+  }, [defaultGreeting]);
 
   const messagesEndRef = useRef(null);
 
@@ -441,16 +476,16 @@ I'm your intelligent workforce and payroll copilot. I continuously monitor cycle
                     fontSize: '0.65rem',
                     padding: '1px 6px',
                     borderRadius: '999px',
-                    backgroundColor: '#dcfce7',
-                    color: '#15803d',
+                    backgroundColor: isEmployee ? '#e0e7ff' : isHR ? '#fef3c7' : '#dcfce7',
+                    color: isEmployee ? '#4338ca' : isHR ? '#b45309' : '#15803d',
                     fontWeight: 700,
                   }}
                 >
-                  LIVE
+                  {isEmployee ? 'EMPLOYEE PORTAL' : isHR ? 'HR OPERATIONS' : isPayroll ? 'PAYROLL EXECUTIVE' : 'ADMIN LIVE'}
                 </span>
               </div>
               <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
-                Workforce Intelligence & Audit Guard
+                {isEmployee ? 'Self-Service Profile, Attendance & Payslips' : isHR ? 'Workforce Directory & Leave Operations' : 'Workforce Intelligence & Audit Guard'}
               </span>
             </div>
           </div>
@@ -474,7 +509,7 @@ I'm your intelligent workforce and payroll copilot. I continuously monitor cycle
           </button>
         </div>
 
-        {/* Quick Suggestion Pills */}
+        {/* Quick Suggestion Pills (Role-Aware) */}
         <div
           style={{
             padding: '10px 18px',
@@ -486,41 +521,118 @@ I'm your intelligent workforce and payroll copilot. I continuously monitor cycle
             whiteSpace: 'nowrap',
           }}
         >
-          <button
-            onClick={() => handleSend('What is our total payroll expenditure this month?')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
-          >
-            💰 Total Spend
-          </button>
-          <button
-            onClick={() => handleSend('Detect payroll anomalies and wage spikes')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
-          >
-            🛡️ Anomaly Audit
-          </button>
-          <button
-            onClick={() => handleSend('Show department-wise compensation breakdown')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
-          >
-            🏢 Dept Share
-          </button>
-          <button
-            onClick={() => handleSend('Who are the top 5 highest earners?')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
-          >
-            🌟 Top Earners
-          </button>
-          <button
-            onClick={() => handleSend('Generate executive summary for leadership')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
-          >
-            📑 Exec Memo
-          </button>
+          {isEmployee && (
+            <>
+              <button
+                onClick={() => handleSend('Summarize my information')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                👤 My Profile
+              </button>
+              <button
+                onClick={() => handleSend('What is my salary breakdown?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                💼 My Salary
+              </button>
+              <button
+                onClick={() => handleSend('What is my attendance summary this month?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                ⏰ Attendance
+              </button>
+              <button
+                onClick={() => handleSend('What is my leave balance?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🌴 Leave Balance
+              </button>
+              <button
+                onClick={() => handleSend('Who is my manager?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                👔 My Manager
+              </button>
+            </>
+          )}
+
+          {isHR && (
+            <>
+              <button
+                onClick={() => handleSend('Show organization headcount and department distribution')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                📊 Headcount
+              </button>
+              <button
+                onClick={() => handleSend('What is company attendance today?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                ⏰ Attendance Today
+              </button>
+              <button
+                onClick={() => handleSend('Show all pending leave requests')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🌴 Pending Leaves
+              </button>
+              <button
+                onClick={() => handleSend('Summarize employee')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🔍 Search Staff
+              </button>
+            </>
+          )}
+
+          {(isPayroll || isSuperAdmin) && (
+            <>
+              <button
+                onClick={() => handleSend('What is our total payroll expenditure this month?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                💰 Total Spend
+              </button>
+              <button
+                onClick={() => handleSend('Detect payroll anomalies and wage spikes')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🛡️ Anomaly Audit
+              </button>
+              <button
+                onClick={() => handleSend('Show department-wise compensation breakdown')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🏢 Dept Share
+              </button>
+              <button
+                onClick={() => handleSend('Who are the top 5 highest earners?')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                🌟 Top Earners
+              </button>
+              <button
+                onClick={() => handleSend('Generate executive summary for leadership')}
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '0.74rem', padding: '4px 10px', borderRadius: '999px', flexShrink: 0 }}
+              >
+                📑 Exec Memo
+              </button>
+            </>
+          )}
         </div>
 
         {/* Chat Messages Body */}
