@@ -430,9 +430,62 @@ export default function PayrollPage() {
     }
   };
 
+  const payrunItemFilters = [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Disbursed / Paid', value: 'PAID' },
+        { label: 'Calculated', value: 'CALCULATED' },
+      ],
+      getValue: (row) => row.status || 'CALCULATED'
+    }
+  ];
+
+  const payrunItemSortOptions = [
+    { label: 'Net Payout', field: 'netPay' },
+    { label: 'Gross Salary', field: 'grossPay' },
+    { label: 'Employee Name', field: 'employee.firstName' },
+    { label: 'Total Deductions', field: 'totalDeductions' },
+  ];
+
+  const payrunItemKanbanConfig = {
+    groupBy: 'status',
+    columns: [
+      { id: 'CALCULATED', title: 'Calculated Slips', color: '#6366f1', bg: '#eef2ff' },
+      { id: 'PAID', title: 'Disbursed & Paid', color: '#10b981', bg: '#ecfdf5' },
+    ],
+    renderCard: (item) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>
+              {item.employee?.firstName} {item.employee?.lastName}
+            </div>
+            <span style={{ fontSize: '0.74rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+              {item.employee?.code || item.employee?.employeeCode || 'EMP-XXXX'}
+            </span>
+          </div>
+          <span className={`badge ${item.status === 'PAID' ? 'badge-success' : 'badge-purple'}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {item.status || 'CALCULATED'}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div><strong>Gross Salary:</strong> ₹{parseFloat(item.grossPay || 0).toLocaleString('en-IN')}</div>
+          <div><strong>Deductions:</strong> -₹{parseFloat(item.totalDeductions || 0).toLocaleString('en-IN')}</div>
+          <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem', marginTop: '2px' }}>
+            Net Take-Home: ₹{parseFloat(item.netPay || 0).toLocaleString('en-IN')}
+          </div>
+        </div>
+      </div>
+    )
+  };
+
   const itemColumns = [
     {
       key: 'employee',
+      sortKey: 'employee.firstName',
       label: 'Employee',
       sortable: true,
       render: (_, row) => (
@@ -1083,6 +1136,9 @@ export default function PayrollPage() {
           columns={itemColumns}
           data={activePayrun?.payrunItems || []}
           searchPlaceholder="Search employees in payrun..."
+          filters={payrunItemFilters}
+          sortOptions={payrunItemSortOptions}
+          kanbanConfig={payrunItemKanbanConfig}
         />
       </div>
 

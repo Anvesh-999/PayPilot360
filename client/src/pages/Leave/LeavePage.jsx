@@ -123,10 +123,96 @@ export default function LeavePage() {
     }
   };
 
+  // Feature Filters for Leave Requests
+  const leaveFilters = useMemo(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Pending Review', value: 'PENDING' },
+        { label: 'Approved', value: 'APPROVED' },
+        { label: 'Rejected', value: 'REJECTED' },
+      ],
+      getValue: (row) => row.status || 'PENDING'
+    },
+    {
+      id: 'leaveType',
+      label: 'Leave Type',
+      options: (leaveTypes || []).map(t => ({ label: t.name, value: t.name })),
+      getValue: (row) => row.leaveType?.name
+    }
+  ], [leaveTypes]);
+
+  // Sort Options for Leave Requests
+  const leaveSortOptions = useMemo(() => [
+    { label: 'Start Date (Newest)', field: 'startDate' },
+    { label: 'Total Days', field: 'totalDays' },
+    { label: 'Employee Name', field: 'employee.firstName' },
+    { label: 'Status', field: 'status' },
+  ], []);
+
+  // Kanban Board for Leave Requests
+  const leaveKanbanConfig = useMemo(() => ({
+    groupBy: 'status',
+    columns: [
+      { id: 'PENDING', title: 'Pending Approval', color: '#f59e0b', bg: '#fffbeb' },
+      { id: 'APPROVED', title: 'Approved Time Off', color: '#10b981', bg: '#ecfdf5' },
+      { id: 'REJECTED', title: 'Rejected Requests', color: '#ef4444', bg: '#fef2f2' },
+    ],
+    renderCard: (req) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>
+              {req.employee?.firstName} {req.employee?.lastName}
+            </div>
+            <span style={{ fontSize: '0.74rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+              {req.employee?.employeeCode || req.employee?.code || 'EMP-XXXX'}
+            </span>
+          </div>
+          <span className={`badge ${req.status === 'APPROVED' ? 'badge-success' : req.status === 'REJECTED' ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {req.status}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div>
+            <strong>Type:</strong> <span style={{ fontWeight: 600, color: '#0f172a' }}>{req.leaveType?.name}</span>
+            <span style={{ color: req.leaveType?.paid ? '#059669' : '#d97706', marginLeft: '6px' }}>
+              ({req.leaveType?.paid ? 'Paid' : 'Unpaid LOP'})
+            </span>
+          </div>
+          <div><strong>Duration:</strong> {new Date(req.startDate).toLocaleDateString()} — {new Date(req.endDate).toLocaleDateString()} ({req.totalDays} days)</div>
+          {req.reason && <div style={{ fontStyle: 'italic', color: '#64748b' }}>"{req.reason}"</div>}
+        </div>
+
+        {isManager && req.status === 'PENDING' && (
+          <div style={{ display: 'flex', gap: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+            <button
+              onClick={() => handleAction(req.id, 'approve')}
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1, padding: '4px', fontSize: '0.72rem', backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => handleAction(req.id, 'reject')}
+              className="btn btn-secondary btn-sm"
+              style={{ flex: 1, padding: '4px', fontSize: '0.72rem', backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}
+            >
+              Reject
+            </button>
+          </div>
+        )}
+      </div>
+    )
+  }), [isManager]);
+
   // 1. Requests Columns
   const requestColumns = [
     {
       key: 'employee',
+      sortKey: 'employee.firstName',
       label: 'Employee',
       sortable: true,
       render: (_, row) => (
@@ -140,6 +226,7 @@ export default function LeavePage() {
     },
     {
       key: 'leaveType',
+      sortKey: 'leaveType.name',
       label: 'Leave Type',
       sortable: true,
       render: (_, row) => (
@@ -501,6 +588,9 @@ export default function LeavePage() {
           data={requests.filter(r => !filterEmployeeId || r.employeeId === filterEmployeeId || r.employee?.id === filterEmployeeId)}
           loading={loading}
           searchPlaceholder="Search leave requests..."
+          filters={leaveFilters}
+          sortOptions={leaveSortOptions}
+          kanbanConfig={leaveKanbanConfig}
         />
       )}
 

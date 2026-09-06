@@ -126,6 +126,107 @@ export default function PayslipListPage() {
     }
   };
 
+  const uniquePeriods = useMemo(() => {
+    const set = new Set();
+    payslips.forEach(p => {
+      if (p.payPeriod) set.add(p.payPeriod);
+    });
+    return Array.from(set);
+  }, [payslips]);
+
+  const payslipFilters = useMemo(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Issued / Disbursed', value: 'ISSUED' },
+        { label: 'Draft', value: 'DRAFT' },
+      ],
+      getValue: (row) => row.status || 'ISSUED',
+      match: (rowVal, selectedVal) => {
+        if (selectedVal === 'ALL') return true;
+        if (selectedVal === 'ISSUED') return rowVal === 'ISSUED' || rowVal === 'PAID' || rowVal === 'VERIFIED';
+        return String(rowVal).toLowerCase() === String(selectedVal).toLowerCase();
+      }
+    },
+    {
+      id: 'payPeriod',
+      label: 'Pay Period',
+      options: uniquePeriods.map(p => ({ label: p, value: p })),
+      getValue: (row) => row.payPeriod
+    }
+  ], [uniquePeriods]);
+
+  const payslipSortOptions = useMemo(() => [
+    { label: 'Net Take-Home', field: 'netPay' },
+    { label: 'Gross Salary', field: 'grossPay' },
+    { label: 'Employee Name', field: 'employee.firstName' },
+    { label: 'Payslip Ref', field: 'payslipNumber' },
+  ], []);
+
+  const payslipKanbanConfig = useMemo(() => ({
+    groupBy: 'status',
+    columns: [
+      {
+        id: 'ISSUED',
+        title: 'Issued & Disbursed Slips',
+        color: '#10b981',
+        bg: '#ecfdf5',
+        match: (val) => val === 'ISSUED' || val === 'PAID' || val === 'VERIFIED'
+      },
+      {
+        id: 'DRAFT',
+        title: 'Draft Calculations',
+        color: '#6366f1',
+        bg: '#eef2ff',
+        match: (val) => val === 'DRAFT' || val === 'CALCULATED'
+      },
+    ],
+    renderCard: (slip) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+              {slip.employee?.firstName} {slip.employee?.lastName}
+            </div>
+            <span style={{ fontSize: '0.74rem', fontFamily: 'monospace', color: '#4338ca', fontWeight: 600 }}>
+              {slip.payslipNumber}
+            </span>
+          </div>
+          <span className="badge badge-success" style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {slip.status || 'ISSUED'}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div><strong>Period:</strong> {slip.payPeriod}</div>
+          <div><strong>Gross Salary:</strong> ₹{parseFloat(slip.grossPay || 0).toLocaleString('en-IN')}</div>
+          <div><strong>Deductions:</strong> -₹{parseFloat(slip.totalDeductions || 0).toLocaleString('en-IN')}</div>
+          <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem', marginTop: '2px' }}>
+            Net Pay: ₹{parseFloat(slip.netPay || 0).toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+          <button
+            onClick={() => { setSelectedPayslip(slip); setIsModalOpen(true); }}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '3px 8px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Eye size={12} /> View
+          </button>
+          <button
+            onClick={() => handleDownloadPDF(slip)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '3px 8px', fontSize: '0.72rem', color: '#4338ca', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Download size={12} /> PDF
+          </button>
+        </div>
+      </div>
+    )
+  }), []);
+
   const columns = [
     {
       key: 'payslipNumber',
@@ -321,6 +422,9 @@ export default function PayslipListPage() {
         columns={columns}
         data={payslips.filter(p => !filterEmployeeId || p.employeeId === filterEmployeeId || p.employee?.id === filterEmployeeId)}
         searchPlaceholder="Search payslips by employee name, code, or ref..."
+        filters={payslipFilters}
+        sortOptions={payslipSortOptions}
+        kanbanConfig={payslipKanbanConfig}
       />
 
       {/* Comprehensive Payslip Document Modal */}

@@ -109,9 +109,75 @@ export default function AttendancePage() {
     }
   };
 
+  // Feature Filters for Attendance
+  const attendanceFilters = useMemo(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Present', value: 'PRESENT' },
+        { label: 'Late', value: 'LATE' },
+        { label: 'Half Day', value: 'HALF_DAY' },
+        { label: 'Absent', value: 'ABSENT' },
+      ],
+      getValue: (row) => row.status || 'PRESENT'
+    }
+  ], []);
+
+  // Sort Options for Attendance
+  const attendanceSortOptions = useMemo(() => [
+    { label: 'Date (Newest)', field: 'date' },
+    { label: 'Hours Worked', field: 'workedHours' },
+    { label: 'Employee Name', field: 'employee.firstName' },
+    { label: 'Status', field: 'status' },
+  ], []);
+
+  // Kanban View for Attendance
+  const attendanceKanbanConfig = useMemo(() => ({
+    groupBy: 'status',
+    columns: [
+      { id: 'PRESENT', title: 'On Time / Present', color: '#10b981', bg: '#ecfdf5' },
+      { id: 'LATE', title: 'Late Arrivals', color: '#f59e0b', bg: '#fffbeb' },
+      { id: 'HALF_DAY', title: 'Half Day Logged', color: '#6366f1', bg: '#eff6ff' },
+      { id: 'ABSENT', title: 'Marked Absent', color: '#ef4444', bg: '#fef2f2' },
+    ],
+    renderCard: (att) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.88rem' }}>
+              {att.employee?.firstName} {att.employee?.lastName}
+            </div>
+            <span style={{ fontSize: '0.74rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+              {att.employee?.employeeCode || att.employee?.code || 'EMP-XXXX'}
+            </span>
+          </div>
+          <span className={`badge ${att.status === 'PRESENT' ? 'badge-success' : att.status === 'LATE' ? 'badge-warning' : 'badge-danger'}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {att.status}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div><strong>Date:</strong> {new Date(att.date).toLocaleDateString()}</div>
+          <div>
+            <strong>Check In:</strong> {att.checkIn ? new Date(att.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+            {' | '}
+            <strong>Check Out:</strong> {att.checkOut ? new Date(att.checkOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Active'}
+          </div>
+          {att.workedHours && (
+            <div style={{ fontWeight: 700, color: '#4338ca', marginTop: '2px' }}>
+              Logged: {parseFloat(att.workedHours).toFixed(2)} hrs
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }), []);
+
   const columns = [
     {
       key: 'employee',
+      sortKey: 'employee.firstName',
       label: 'Employee',
       sortable: true,
       render: (_, row) => (
@@ -125,6 +191,7 @@ export default function AttendancePage() {
     },
     {
       key: 'date',
+      sortKey: 'date',
       label: 'Date',
       sortable: true,
       render: (val) => new Date(val).toLocaleDateString()
@@ -346,6 +413,9 @@ export default function AttendancePage() {
         columns={columns}
         data={logs.filter(l => !filterEmployeeId || l.employeeId === filterEmployeeId || l.employee?.id === filterEmployeeId)}
         searchPlaceholder="Search attendance by employee name or code..."
+        filters={attendanceFilters}
+        sortOptions={attendanceSortOptions}
+        kanbanConfig={attendanceKanbanConfig}
       />
 
       {isModalOpen && (

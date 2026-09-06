@@ -249,12 +249,165 @@ export default function EmployeeListPage() {
     return list;
   }, [departments, employees]);
 
-  // Filter employees by department
-  const filteredEmployees = useMemo(() => {
-    if (selectedDept === 'ALL') return employees;
-    if (selectedDept === 'Unassigned') return employees.filter(emp => !emp.department || !emp.department?.name);
-    return employees.filter(emp => emp.department?.name === selectedDept);
-  }, [employees, selectedDept]);
+  // Feature-based Filters for Employee Directory
+  const employeeFilters = useMemo(() => [
+    {
+      id: 'department',
+      label: 'Department',
+      options: allDepartmentNames.map(d => ({ label: d, value: d })),
+      getValue: (row) => row.department?.name || 'Unassigned',
+      match: (rowVal, selectedVal) => {
+        if (selectedVal === 'ALL') return true;
+        if (selectedVal === 'Unassigned') return !rowVal || rowVal === 'Unassigned';
+        return String(rowVal || '').toLowerCase() === String(selectedVal).toLowerCase();
+      }
+    },
+    {
+      id: 'employmentStatus',
+      label: 'Status',
+      options: [
+        { label: 'Active', value: 'ACTIVE' },
+        { label: 'On Leave', value: 'ON_LEAVE' },
+        { label: 'Suspended', value: 'SUSPENDED' },
+        { label: 'Terminated', value: 'TERMINATED' },
+      ],
+      getValue: (row) => row.employmentStatus || row.status || 'ACTIVE'
+    },
+    {
+      id: 'employmentType',
+      label: 'Type',
+      options: [
+        { label: 'Full Time', value: 'FULL_TIME' },
+        { label: 'Part Time', value: 'PART_TIME' },
+        { label: 'Contract', value: 'CONTRACT' },
+        { label: 'Intern', value: 'INTERN' },
+      ],
+      getValue: (row) => row.employmentType || 'FULL_TIME'
+    }
+  ], [allDepartmentNames]);
+
+  // Feature-based Sort Options
+  const employeeSortOptions = useMemo(() => [
+    { label: 'First Name (A-Z)', field: 'firstName' },
+    { label: 'Last Name', field: 'lastName' },
+    { label: 'Staff Code', field: 'employeeCode' },
+    { label: 'Department', field: 'department.name' },
+    { label: 'Designation', field: 'jobPosition.title' },
+    { label: 'Joining Date', field: 'joiningDate' },
+  ], []);
+
+  // Kanban Board Configuration
+  const employeeKanbanConfig = useMemo(() => ({
+    groupBy: (row) => row.department?.name || 'Unassigned',
+    columns: allDepartmentNames.map((deptName) => ({
+      id: deptName,
+      title: deptName,
+      color: deptName.includes('Engineering') ? '#3b82f6' : deptName.includes('Sales') ? '#10b981' : deptName.includes('HR') ? '#8b5cf6' : '#64748b',
+      bg: deptName.includes('Engineering') ? '#eff6ff' : deptName.includes('Sales') ? '#f0fdf4' : deptName.includes('HR') ? '#f5f3ff' : '#f8fafc',
+      match: (val, item) => {
+        if (deptName === 'Unassigned') return !item.department || !item.department?.name;
+        return item.department?.name === deptName;
+      }
+    })),
+    renderCard: (emp) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: getAvatarGradient(emp.firstName),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: '0.88rem',
+            flexShrink: 0
+          }}>
+            {emp.firstName?.[0]}{emp.lastName?.[0]}
+          </div>
+          <div style={{ overflow: 'hidden', flex: 1 }}>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+              {emp.firstName} {emp.lastName}
+            </div>
+            <span style={{ fontFamily: 'monospace', fontSize: '0.74rem', color: '#6366f1', fontWeight: 600 }}>
+              {emp.employeeCode || emp.code}
+            </span>
+          </div>
+          <span className={`badge ${emp.employmentStatus === 'ON_LEAVE' ? 'badge-warning' : emp.employmentStatus === 'TERMINATED' ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {emp.employmentStatus || emp.status || 'ACTIVE'}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Briefcase size={13} color="#94a3b8" />
+            <span>{emp.jobPosition?.title || 'Staff Member'}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Mail size={13} color="#94a3b8" />
+            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{emp.email}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+            <Building size={13} color="#94a3b8" />
+            <select
+              value={emp.departmentId || emp.department?.id || ''}
+              onChange={(e) => handleQuickChangeDepartment(emp.id, e.target.value)}
+              style={{
+                fontSize: '0.74rem',
+                padding: '3px 6px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                backgroundColor: '#f8fafc',
+                color: '#1e293b',
+                fontWeight: 500,
+                cursor: 'pointer',
+                width: '100%'
+              }}
+              title="Reassign Department"
+            >
+              <option value="">(Unassigned)</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
+          <button
+            onClick={() => handleInspect(emp)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '4px 8px', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+            title="Inspect profile"
+          >
+            <Eye size={12} /> View
+          </button>
+          {canManage && (
+            <button
+              onClick={() => handleEditClick(emp)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '4px 8px', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#4f46e5' }}
+              title="Edit employee details"
+            >
+              <Edit2 size={12} /> Edit
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => handleDeleteEmployee(emp)}
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '4px 8px', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '4px', color: '#e11d48' }}
+              title="Terminate employee"
+            >
+              <Trash2 size={12} /> Delete
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }), [allDepartmentNames, departments, canManage, canDelete]);
 
   const columns = [
     {
@@ -435,270 +588,18 @@ export default function EmployeeListPage() {
         )}
       </div>
 
-      {/* Filter and View Toggle Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', marginRight: '6px' }}>Filter by Dept:</span>
-          {['ALL', ...allDepartmentNames].map((dept) => (
-            <button
-              key={dept}
-              onClick={() => setSelectedDept(dept)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '999px',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                border: selectedDept === dept ? '1px solid #6366f1' : '1px solid #e2e8f0',
-                backgroundColor: selectedDept === dept ? '#eef2ff' : '#ffffff',
-                color: selectedDept === dept ? '#4338ca' : '#64748b',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {dept === 'ALL' ? 'All Units' : dept}
-            </button>
-          ))}
-        </div>
-
-        {/* View Mode Switcher (List vs Kanban) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          backgroundColor: '#f1f5f9',
-          padding: '3px',
-          borderRadius: '10px',
-          border: '1px solid #e2e8f0',
-          gap: '2px'
-        }}>
-          <button
-            onClick={() => setViewMode('list')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '7px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: 'none',
-              backgroundColor: viewMode === 'list' ? '#ffffff' : 'transparent',
-              color: viewMode === 'list' ? '#1e293b' : '#64748b',
-              boxShadow: viewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <List size={14} /> List View
-          </button>
-          <button
-            onClick={() => setViewMode('kanban')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '7px',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              border: 'none',
-              backgroundColor: viewMode === 'kanban' ? '#ffffff' : 'transparent',
-              color: viewMode === 'kanban' ? '#6366f1' : '#64748b',
-              boxShadow: viewMode === 'kanban' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            <LayoutGrid size={14} /> Kanban Board
-          </button>
-        </div>
-      </div>
-
-      {/* Main View: Table List or Kanban Board */}
-      {viewMode === 'list' ? (
-        <DataTable
-          columns={columns}
-          data={filteredEmployees}
-          loading={loading}
-          searchPlaceholder="Search employees by name, email, or staff code..."
-        />
-      ) : (
-        /* Dynamic Kanban Board View across all departments */
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))',
-          gap: '18px',
-          alignItems: 'start'
-        }}>
-          {(selectedDept === 'ALL' ? allDepartmentNames : [selectedDept]).map((deptName) => {
-            const deptStaff = employees.filter(e => {
-              if (deptName === 'Unassigned') {
-                return !e.department || !e.department?.name;
-              }
-              return e.department?.name === deptName;
-            });
-            const deptObj = departments.find(d => d.name === deptName);
-
-            return (
-              <div
-                key={deptName}
-                style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '14px',
-                  border: '1px solid #e2e8f0',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  minHeight: '220px'
-                }}
-              >
-                {/* Column Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '10px', borderBottom: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.94rem', color: '#0f172a' }}>{deptName}</span>
-                    <span className="badge badge-purple" style={{ fontSize: '0.72rem' }}>{deptStaff.length}</span>
-                  </div>
-                  {deptObj && (
-                    <button
-                      onClick={() => handleOpenOnboardWithDept(deptObj.id)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '3px 8px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      title={`Add staff directly to ${deptName}`}
-                    >
-                      <Plus size={12} /> Add
-                    </button>
-                  )}
-                </div>
-
-                {/* Cards List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {deptStaff.length === 0 ? (
-                    <div style={{ padding: '30px 12px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
-                      No staff members in this unit
-                    </div>
-                  ) : (
-                    deptStaff.map((emp) => (
-                      <div
-                        key={emp.id}
-                        className="card table-row-hover"
-                        style={{
-                          padding: '16px',
-                          borderRadius: '12px',
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                        }}
-                      >
-                        {/* Header: Avatar + Name + Code */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '10px',
-                            background: getAvatarGradient(emp.firstName),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#ffffff',
-                            fontWeight: 700,
-                            fontSize: '0.9rem',
-                            flexShrink: 0
-                          }}>
-                            {emp.firstName?.[0]}{emp.lastName?.[0]}
-                          </div>
-                          <div style={{ overflow: 'hidden', flex: 1 }}>
-                            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.92rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                              {emp.firstName} {emp.lastName}
-                            </div>
-                            <span style={{ fontFamily: 'monospace', fontSize: '0.74rem', color: '#6366f1', fontWeight: 600 }}>
-                              {emp.employeeCode || emp.code}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Details */}
-                        <div style={{ fontSize: '0.78rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Briefcase size={13} color="#94a3b8" />
-                            <span>{emp.jobPosition?.title || 'Staff Member'}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Mail size={13} color="#94a3b8" />
-                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{emp.email}</span>
-                          </div>
-                          {/* Quick Department Reassignment */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                            <Building size={13} color="#94a3b8" />
-                            <select
-                              value={emp.departmentId || emp.department?.id || ''}
-                              onChange={(e) => handleQuickChangeDepartment(emp.id, e.target.value)}
-                              style={{
-                                fontSize: '0.74rem',
-                                padding: '3px 6px',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                backgroundColor: '#f8fafc',
-                                color: '#1e293b',
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                width: '100%'
-                              }}
-                              title="Reassign Department"
-                            >
-                              <option value="">(Unassigned)</option>
-                              {departments.map((d) => (
-                                <option key={d.id} value={d.id}>{d.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Bottom Actions Bar */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #f1f5f9' }}>
-                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>● {emp.employmentStatus || emp.status || 'ACTIVE'}</span>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                              onClick={() => handleInspect(emp)}
-                              className="btn btn-secondary btn-sm"
-                              style={{ padding: '4px 8px' }}
-                              title="Inspect Form & History"
-                            >
-                              <Eye size={13} />
-                            </button>
-                            {canManage && (
-                              <button
-                                onClick={() => handleEditClick(emp)}
-                                className="btn btn-secondary btn-sm"
-                                style={{ padding: '4px 8px', color: '#4f46e5' }}
-                                title="Edit Employee Details"
-                              >
-                                <Edit2 size={13} />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button
-                                onClick={() => handleDeleteEmployee(emp)}
-                                className="btn btn-secondary btn-sm"
-                                style={{ padding: '4px 8px', color: '#e11d48' }}
-                                title="Terminate / Delete Employee"
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Universal List and Kanban View with Feature Filters & Multi-Field Sorting */}
+      <DataTable
+        columns={columns}
+        data={employees}
+        loading={loading}
+        searchPlaceholder="Search employees by name, email, or staff code..."
+        filters={employeeFilters}
+        sortOptions={employeeSortOptions}
+        kanbanConfig={employeeKanbanConfig}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
 
       {/* Onboard Employee Modal */}
       {isModalOpen && (

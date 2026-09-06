@@ -158,10 +158,92 @@ export default function ContractListPage() {
     }
   };
 
+  // Feature Filters for Contracts
+  const contractFilters = useMemo(() => [
+    {
+      id: 'status',
+      label: 'Status',
+      options: [
+        { label: 'Active', value: 'ACTIVE' },
+        { label: 'Draft', value: 'DRAFT' },
+        { label: 'Expired', value: 'EXPIRED' },
+        { label: 'Cancelled', value: 'CANCELLED' },
+      ],
+      getValue: (row) => row.status || 'ACTIVE'
+    },
+    {
+      id: 'wageType',
+      label: 'Wage Type',
+      options: [
+        { label: 'Monthly', value: 'MONTHLY' },
+        { label: 'Hourly', value: 'HOURLY' },
+        { label: 'Daily', value: 'DAILY' },
+      ],
+      getValue: (row) => row.wageType || 'MONTHLY'
+    }
+  ], []);
+
+  // Sort Options for Contracts
+  const contractSortOptions = useMemo(() => [
+    { label: 'Base Wage', field: 'basicWage' },
+    { label: 'Employee Name', field: 'employee.firstName' },
+    { label: 'Start Date', field: 'startDate' },
+    { label: 'Status', field: 'status' },
+  ], []);
+
+  // Kanban Board for Contracts
+  const contractKanbanConfig = useMemo(() => ({
+    groupBy: 'status',
+    columns: [
+      { id: 'ACTIVE', title: 'Active Contracts', color: '#10b981', bg: '#ecfdf5' },
+      { id: 'DRAFT', title: 'Draft Terms', color: '#3b82f6', bg: '#eff6ff' },
+      { id: 'EXPIRED', title: 'Expired / Lapsed', color: '#f59e0b', bg: '#fffbeb' },
+      { id: 'CANCELLED', title: 'Cancelled', color: '#ef4444', bg: '#fef2f2' },
+    ],
+    renderCard: (c) => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.9rem' }}>
+              {c.employee?.firstName} {c.employee?.lastName}
+            </div>
+            <span style={{ fontSize: '0.74rem', fontFamily: 'monospace', color: '#6366f1', fontWeight: 600 }}>
+              {c.employee?.employeeCode || c.employee?.code || 'EMP-XXXX'}
+            </span>
+          </div>
+          <span className={`badge ${c.status === 'ACTIVE' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+            ● {c.status}
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div><strong>Structure:</strong> {c.salaryStructure?.name || 'Default Structure'}</div>
+          <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.9rem' }}>
+            ₹{parseFloat(c.basicWage || c.baseSalary || 0).toLocaleString('en-IN')} / {(c.wageType || 'MONTHLY').toLowerCase()}
+          </div>
+          <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+            {new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : 'Indefinite'}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+          <button
+            onClick={() => handleDeleteContract(c.id)}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '3px 8px', color: '#e11d48', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Trash2 size={12} /> Delete
+          </button>
+        </div>
+      </div>
+    )
+  }), []);
+
   // Contracts Table Columns
   const contractColumns = [
     {
       key: 'employee',
+      sortKey: 'employee.firstName',
       label: 'Employee',
       sortable: true,
       render: (_, row) => (
@@ -175,6 +257,7 @@ export default function ContractListPage() {
     },
     {
       key: 'salaryStructure',
+      sortKey: 'salaryStructure.name',
       label: 'Salary Structure',
       sortable: true,
       render: (val, row) => <span style={{ fontWeight: 500, color: '#334155' }}>{row.salaryStructure?.name || 'Default Structure'}</span>
@@ -409,6 +492,9 @@ export default function ContractListPage() {
           data={contracts.filter(c => !filterEmployeeId || c.employeeId === filterEmployeeId || c.employee?.id === filterEmployeeId)}
           loading={loading}
           searchPlaceholder="Search active contracts by employee or wage terms..."
+          filters={contractFilters}
+          sortOptions={contractSortOptions}
+          kanbanConfig={contractKanbanConfig}
         />
       ) : (
         <DataTable
